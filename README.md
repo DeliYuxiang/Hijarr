@@ -1,5 +1,8 @@
 # Hijarr — 中文动漫媒体环境的透明代理与字幕生态引擎
 
+[![GitHub](https://img.shields.io/badge/GitHub-DeliYuxiang%2FHijarr-blue?logo=github)](https://github.com/DeliYuxiang/Hijarr)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+
 Hijarr 是专为 **Sonarr / Prowlarr** 深度定制的中文化增强工具，使用 **Go** 编写。  
 名称来源：**Hi**jacking upstream services for Son**arr** / Baz**arr**。
 
@@ -32,7 +35,7 @@ Hijarr 目前已精简为单一职责的高效核心：**Smart Client (consumpti
 
 | 项目 | 角色 |
 | :--- | :--- |
-| **Hijarr**（本项目） | Smart Client — DNS 劫持、字幕同步、媒体库 MD5 管理 |
+| [**Hijarr**](https://github.com/DeliYuxiang/Hijarr)（本项目） | Smart Client — DNS 劫持、字幕同步、媒体库 MD5 管理 |
 | [**SRN**](https://github.com/DeliYuxiang/srn) | 去中心化字幕中继协议，Hijarr 的首选查询源与内容提供商 |
 | [**Sonarr**](https://github.com/Sonarr/Sonarr) | 剧集管理，Hijarr 拦截其元数据请求并直连同步字幕 |
 | [**Caddy**](https://github.com/caddyserver/caddy) | 反向代理，建议作为 Hijarr 的 TLS 终止层与访问控制层 |
@@ -158,6 +161,8 @@ services:
 - `api.thetvdb.com`
 - `api4.thetvdb.com`
 
+详细的 DNS 劫持与 Caddy TLS 终止配置，见 [DNS_HIJACKING_GUIDE.md](./DNS_HIJACKING_GUIDE.md)。
+
 ---
 
 ## 🛠️ 环境参数
@@ -247,8 +252,8 @@ docker compose up --build
 
 | 模块 | 开源计划 |
 | :--- | :--- |
-| `hijarr-proxy`（消费侧：DNS 劫持、字幕聚合、Sonarr 同步） | ✅ AGPL v3 开源 |
+| [`hijarr-proxy`](https://github.com/DeliYuxiang/Hijarr)（消费侧：DNS 劫持、字幕聚合、Sonarr 同步） | ✅ AGPL v3 开源 |
 | `hijarr-uploader`（SRN 上传 SDK/CLI） | ✅ AGPL v3 开源 |
 | `hijarr-scraper`（爬取 + 清洗核心） | 🔒 不开源 |
 
-> 贡献者通过提交 PR 即视为不可撤销地将该贡献的全部著作权转让给项目维护者。
+> 贡献者通过提交 PR 即视为同意 [CONTRIBUTING.md](./CONTRIBUTING.md) 中的贡献者协议，不可撤销地将该贡献的全部著作权转让给项目维护者。
