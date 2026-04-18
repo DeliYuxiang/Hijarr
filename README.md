@@ -36,7 +36,7 @@ Hijarr 目前已精简为单一职责的高效核心：**Smart Client (consumpti
 | 项目 | 角色 |
 | :--- | :--- |
 | [**Hijarr**](https://github.com/DeliYuxiang/Hijarr)（本项目） | Smart Client — DNS 劫持、字幕同步、媒体库 MD5 管理 |
-| [**SRN**](https://github.com/DeliYuxiang/srn) | 去中心化字幕中继协议，Hijarr 的首选查询源与内容提供商 |
+| [**SRN**](https://github.com/DeliYuxiang/SubtitleRelayNetwork) | 去中心化字幕中继协议，Hijarr 的首选查询源与内容提供商 |
 | [**Sonarr**](https://github.com/Sonarr/Sonarr) | 剧集管理，Hijarr 拦截其元数据请求并直连同步字幕 |
 | [**Caddy**](https://github.com/caddyserver/caddy) | 反向代理，建议作为 Hijarr 的 TLS 终止层与访问控制层 |
 

@@ -37,11 +37,11 @@ skyhook.sonarr.tv / api.thetvdb.com（真实服务器）
 
 根据你的环境选择以下任一方案：
 
-### 方案 A：AdGuard Home / DNS 服务器（推荐）
+### 方案 A：AdGuard Home / DNS 服务器
 在 DNS 服务器管理界面添加 **DNS 重写 (DNS Rewrites)**：
 - 将上述域名直接指向 Caddy 宿主机 IP。
 
-### 方案 B：Docker Compose `extra_hosts`
+### 方案 B：Docker Compose `extra_hosts`（推荐）
 在 Sonarr 的 `docker-compose.yml` 中直接硬编码：
 ```yaml
 services:
