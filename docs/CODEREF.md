@@ -1,0 +1,523 @@
+<!-- CODEREF — generated 2026-04-18 11:13 by tools/coderef/main.go -->
+<!-- Files: 28 | Lines: 6006 -->
+<!-- Regen: CGO_ENABLED=0 go run ./tools/coderef > docs/CODEREF.md -->
+<!-- Reading tip: §5 Symbol Index is primary lookup. §3=routes §4=DB §7=deps -->
+
+## §2 Package Tree
+
+| pkg | file | L | notes |
+|-----|------|---|-------|
+| `cmd/hijarr` | main.go | 166 |  |
+| `internal/cache` | cache.go | 102 |  |
+| `internal/cache` | metadata_cache.go | 129 |  |
+| `internal/config` | config.go | 223 |  |
+| `internal/db` | db.go | 36 | Package db provides a shared SQLite opener that applies WAL mode and ... |
+| `internal/logger` | logger.go | 251 | Package logger provides a level-based logger with optional per-module... |
+| `internal/maintenance` | migration.go | 45 |  |
+| `internal/maintenance` | runner.go | 86 |  |
+| `internal/maintenance` | store.go | 89 |  |
+| `internal/metrics` | metrics.go | 63 | Package metrics provides lightweight atomic counters and a rolling-wi... |
+| `internal/migrations` | migrations.go | 19 |  |
+| `internal/migrations` | srn_resign_v2.go | 109 |  |
+| `internal/proxy` | torznab.go | 295 |  |
+| `internal/proxy` | tvdb.go | 255 |  |
+| `internal/proxy` | util.go | 64 |  |
+| `internal/scheduler` | scheduler.go | 157 |  |
+| `internal/scheduler` | sonarr_sync.go | 318 |  |
+| `internal/sonarr` | client.go | 145 |  |
+| `internal/srn` | event.go | 236 |  |
+| `internal/srn` | provider.go | 158 |  |
+| `internal/srn` | relay.go | 567 |  |
+| `internal/srn` | store.go | 396 |  |
+| `internal/state` | store.go | 420 |  |
+| `internal/tmdb` | client.go | 373 |  |
+| `internal/util` | subtitle.go | 282 |  |
+| `internal/web` | api.go | 258 |  |
+| `internal/web` | db_api.go | 483 |  |
+| `internal/web` | media_library.go | 281 |  |
+
+## §3 HTTP Routes  [server :8001]
+
+```
+Dispatch priority — NoRoute catch-all (cmd/hijarr/main.go:101):
+  1. path HasPrefix /debug/        → debug.HandleDebug
+  2. path == /assrt-dl             → proxy.AssrtFileProxy
+  3. host Contains api.assrt.net   → proxy.AssrtMitmProxy
+  4. path HasPrefix /api           → proxy.TorznabProxy
+  5. fallthrough                   → proxy.TVDBMitmProxy
+```
+
+Static routes (internal/web/api.go):
+
+| Method | Path | File:L |
+|--------|------|--------|
+| Any | `/prowlarr` | cmd/hijarr/main.go:133 |
+| Any | `/prowlarr/*path` | cmd/hijarr/main.go:132 |
+| Any | `/sonarr` | cmd/hijarr/main.go:137 |
+| Any | `/sonarr/*path` | cmd/hijarr/main.go:136 |
+| POST | `/apply-subtitle` | internal/web/api.go:61 |
+| GET | `/config` | internal/web/api.go:54 |
+| GET | `/events` | internal/web/api.go:78 |
+| DELETE | `/events/:id` | internal/web/api.go:79 |
+| GET | `/favicon.svg` | internal/web/api.go:42 |
+| GET | `/jobs` | internal/web/api.go:57 |
+| GET | `/media-library` | internal/web/api.go:58 |
+| GET | `/media-library/:id` | internal/web/api.go:59 |
+| GET | `/preferences` | internal/web/api.go:67 |
+| POST | `/preferences/blacklist` | internal/web/api.go:68 |
+| DELETE | `/preferences/blacklist/:hash` | internal/web/api.go:69 |
+| POST | `/preferences/pin` | internal/web/api.go:70 |
+| DELETE | `/preferences/pin` | internal/web/api.go:71 |
+| GET | `/search` | internal/web/api.go:77 |
+| POST | `/search-episode` | internal/web/api.go:60 |
+| GET | `/stats` | internal/web/api.go:56 |
+| GET | `/status` | internal/web/api.go:55 |
+| GET | `/tmdb/search` | internal/web/api.go:64 |
+| GET | `/tmdb/season-count` | internal/web/api.go:62 |
+| GET | `/failed-files` | internal/web/db_api.go:44 |
+| POST | `/failed-files/delete` | internal/web/db_api.go:45 |
+| GET | `/metadata-cache` | internal/web/db_api.go:34 |
+| POST | `/metadata-cache/delete` | internal/web/db_api.go:35 |
+| POST | `/metadata-cache/upsert` | internal/web/db_api.go:36 |
+| GET | `/seen-files` | internal/web/db_api.go:41 |
+| POST | `/seen-files/delete` | internal/web/db_api.go:42 |
+| GET | `/srn-events` | internal/web/db_api.go:38 |
+| POST | `/srn-events/delete` | internal/web/db_api.go:39 |
+
+Debug endpoints (internal/debug/handler.go) — prefix `/debug/`:
+```
+  GET  /debug/srn/stats          — srn_events+subtitle_cache+seen_files行数
+  GET  /debug/srn/events         — srn_events列表(无BLOB); ?title= ?season= ?ep=
+  GET  /debug/srn/cache          — subtitle_cache条目
+  GET  /debug/srn/rss            — seen_rss GUIDs
+  GET  /debug/srn/dump           — 全量JSON
+  GET  /debug/srn/seen-files     — seen_files; ?path= filter
+  GET  /debug/srn/failed-files   — failed_files列表
+  POST /debug/srn/correct/delete-event      — 删除单个srn_events行
+  POST /debug/srn/correct/delete-title      — 按title批量删除
+  POST /debug/srn/correct/reingest          — 重新入库(先ForgetFile)
+  POST /debug/srn/correct/delete-failed-file — 从failed_files移除
+  POST /debug/srn/correct/delete-seen-file  — 从seen_files移除
+  POST /debug/srn/correct/delete-rss        — 从seen_rss移除
+  POST /debug/srn/correct/delete-cache      — 从subtitle_cache删除
+```
+
+## §4 DB Schema  [SQLite WAL — modernc.org/sqlite, all via db.Open()]
+
+**applied_maintenance** — internal/maintenance/store.go:12
+
+**failed_files** — internal/state/store.go:43
+
+**global_state** — internal/state/store.go:47
+
+**metadata_cache** — internal/cache/metadata_cache.go:49
+
+**seen_files** — internal/state/store.go:39
+
+**srn_queue** — internal/srn/store.go:55
+
+**subtitle_blacklist** — internal/state/store.go:57
+
+**subtitle_pins** — internal/state/store.go:63
+
+**subtitle_selections** — internal/state/store.go:51
+
+**tmdb_cache** — internal/cache/cache.go:31
+
+```
+srn_events(id TEXT PK, kind INT=1001, created_at INT, tags TEXT=JSON, filename TEXT,
+           title TEXT, tmdb_id TEXT, lang TEXT='zh', season INT, ep INT, content BLOB)
+  idx: (title,season,ep)  (tmdb_id,season,ep)
+seen_files(path TEXT PK, mtime_ns INT)
+failed_files(path TEXT PK, failed_at INT)  — TTL via DISK_SCAN_FAIL_TTL
+global_stats(key TEXT PK, value INT=0)
+tried_magnets(hash TEXT PK, tried_at INT)
+metadata_cache(raw_title TEXT PK, tmdb_id INT, title TEXT, season INT, episode INT,
+               aliases TEXT=JSON, created_at INT, updated_at INT)
+subtitle_cache(key TEXT PK='title|Sn|En', value TEXT=JSON, cached_at INT, updated_at INT)
+torrent_patterns(source_type TEXT, source_key TEXT, tmdb_id INT, regex_config TEXT=JSON,
+                 original_name TEXT, updated_at INT — PK(source_type,source_key))
+subtitle_archives(file_md5 TEXT PK, parent_source_type TEXT, parent_source_key TEXT,
+                  content_map TEXT=JSON, updated_at INT)
+seen_rss(guid TEXT PK)  — created lazily when RSS_FEEDS configured
+```
+
+## §5 Symbol Index
+
+Format: `KIND  Signature  file:LINE  // doc`
+KIND: F=func M=method T=type I=iface V=var C=const
+
+### pkg: `internal/cache`
+T  TMDBCache{unexported}  cache.go:12
+F  InitTMDBCache(string)  cache.go:22
+F  Get(string) (T,bool)  cache.go:46  // Get fetches from L1 mem cache, falling back to L2 DB cache.
+F  Set(string,T)  cache.go:78
+T  Metadata{RawTitle,TMDBID,Title,Season,Episode,Aliases}  metadata_cache.go:16  // Metadata represents the parsed and verified info for a raw title.
+T  MetadataCache{unexported}  metadata_cache.go:25
+F  GetMetadataCache(string) *MetadataCache  metadata_cache.go:35
+M  (*MetadataCache) Get(string) (*Metadata,bool)  metadata_cache.go:68
+M  (*MetadataCache) Invalidate(string) error  metadata_cache.go:96  // Invalidate removes a single metadata entry from both L1 and L2 by raw...
+M  (*MetadataCache) Set(*Metadata)  metadata_cache.go:105
+
+### pkg: `internal/config`
+T  SubtitleLanguagestring  config.go:19  // SubtitleLanguage 是 SRN relay 的语言标签枚举。
+C  LangZH SubtitleLanguage  config.go:23
+C  LangZHHans SubtitleLanguage  config.go:25
+C  LangZHHant SubtitleLanguage  config.go:27
+C  LangZHBilingual SubtitleLanguage  config.go:29
+C  LangEN SubtitleLanguage  config.go:31
+M  (SubtitleLanguage) SonarrFileSuffixes() []string  config.go:44  // SonarrFileSuffixes 返回此语言标签在磁盘上对应的 Sonarr ...
+T  SeasonMap{IncludeTitle,Seasons}  config.go:94  // SeasonMap defines manual season overrides for weirdly-named multi-sea...
+V  ManualSeasonOverrides  config.go:101  // ManualSeasonOverrides maps Chinese series titles to their season alia...
+V  Port  config.go:136
+V  ProwlarrTargetURL  config.go:137
+V  ProwlarrAPIKey  config.go:139
+V  TMDBAPIKey  config.go:140
+V  TargetLanguage  config.go:141
+V  TVDBLanguage  config.go:142
+V  SubtitleSearchTimeout  config.go:143
+V  CacheDBPath  config.go:145
+V  SRNDBPath  config.go:146
+V  StateDBPath  config.go:147
+V  LocalDownloadPaths  config.go:151
+V  SonarrURL  config.go:153
+V  SonarrAPIKey  config.go:154
+V  SonarrSyncInterval  config.go:155
+V  SonarrPathPrefix  config.go:156
+V  LocalPathPrefix  config.go:157
+V  BackendSRNURL  config.go:161
+V  SRNRelayURLs  config.go:163
+V  SRNPreferredLanguages  config.go:166
+V  SRNPrivKey  config.go:171
+V  SRNNodeAlias  config.go:174
+
+### pkg: `internal/db`
+F  Open(string) (*DB,error)  db.go:19  // Open opens (or creates) the SQLite database at path with:
+
+### pkg: `internal/logger`
+T  Levelint  logger.go:25  // Level represents the log verbosity level.
+C  LevelDebug Level  logger.go:28
+C  LevelInfo  logger.go:29
+C  LevelWarn  logger.go:30
+C  LevelError  logger.go:31
+M  (Level) String() string  logger.go:34
+F  Init()  logger.go:76  // Init reads LOG_LEVEL from the environment and configures log levels.
+F  SetLevel(Level)  logger.go:131  // SetLevel overrides the global log level (useful in tests).
+F  GetLevel() Level  logger.go:138  // GetLevel returns the current global log level.
+F  Debug(string,...any)  logger.go:180  // Debug logs at DEBUG level using the global level.
+F  Info(string,...any)  logger.go:187  // Info logs at INFO level.
+F  Warn(string,...any)  logger.go:194  // Warn logs a recoverable error.
+F  Error(string,...any)  logger.go:201  // Error always logs to stderr.
+T  ModuleLogger{unexported}  logger.go:209  // ModuleLogger is a logger scoped to a named module.
+F  For(string) *ModuleLogger  logger.go:216  // For returns a ModuleLogger for the given module name and registers th...
+M  (*ModuleLogger) Debug(string,...any)  logger.go:224
+M  (*ModuleLogger) Info(string,...any)  logger.go:231
+M  (*ModuleLogger) Warn(string,...any)  logger.go:238
+M  (*ModuleLogger) Error(string,...any)  logger.go:245
+M  (*ModuleLogger) Printf(string,...any)  logger.go:249
+
+### pkg: `internal/maintenance`
+T  TaskCategorystring  migration.go:6  // TaskCategory defines the type of community maintenance work.
+C  CategoryProtocol TaskCategory  migration.go:9
+C  CategoryCleanup TaskCategory  migration.go:10
+C  CategoryStats TaskCategory  migration.go:11
+T  Task{ID();Category();Run()}  migration.go:18  // Task is a maintenance job that can be领取 and processed by the client.
+T  Registry{unexported}  migration.go:25  // Registry holds registered maintenance tasks.
+M  (*Registry) Register(Task)  migration.go:31  // Register appends a task.
+M  (*Registry) All() []Task  migration.go:43  // All returns every registered task.
+T  TaskStatus{ID,Category,Applied,RunCount,AppliedAt}  runner.go:11  // TaskStatus is the view of a single maintenance task for the debug API.
+T  TaskRunner{unexported}  runner.go:20  // TaskRunner executes registered maintenance tasks.
+F  NewTaskRunner(*TaskStore,*Registry) *TaskRunner  runner.go:26  // NewTaskRunner creates a TaskRunner.
+M  (*TaskRunner) RunOneShotMigrations(Context) error  runner.go:33  // RunOneShotMigrations executes pending one-shot protocol migrations (C...
+M  (*TaskRunner) RunCommunityTasks(Context,[]TaskCategory) error  runner.go:60  // RunCommunityTasks executes community maintenance tasks that the clien...
+T  AppliedRecord{ID,AppliedAt,RunCount}  store.go:19  // AppliedRecord represents a row in applied_maintenance.
+T  TaskStore{unexported}  store.go:26  // TaskStore persists maintenance task state in SQLite.
+F  NewTaskStore(string) (*TaskStore,error)  store.go:31  // NewTaskStore opens (or reuses) the SQLite file at dbPath.
+M  (*TaskStore) IsApplied(string) (bool,error)  store.go:45  // IsApplied returns true if the task with the given ID has been
+M  (*TaskStore) MarkApplied(string) error  store.go:60  // MarkApplied records the task as successfully completed.
+M  (*TaskStore) ResetApplied(string) error  store.go:69  // ResetApplied removes the applied record.
+M  (*TaskStore) ListAll() ([]AppliedRecord,error)  store.go:75  // ListAll returns every row in applied_maintenance.
+
+### pkg: `internal/metrics`
+V  SRNQueryTotal Int64  metrics.go:12
+V  SRNQueryHit Int64  metrics.go:13
+T  StatsJSON{SRNQueryTotal,SRNQueryHit}  metrics.go:17  // StatsJSON holds all current metrics for API consumption.
+F  CurrentJSON() StatsJSON  metrics.go:23  // CurrentJSON returns a JSON-friendly struct of current counters.
+F  Report() string  metrics.go:39  // Report computes a delta since the last call, formats a summary string,
+
+### pkg: `internal/migrations`
+F  Wire(string)  migrations.go:8  // Wire registers all known maintenance tasks.
+F  GlobalRegistry() *Registry  migrations.go:17  // GlobalRegistry returns the process-wide maintenance Registry.
+M  (*srnResignV2) ID() string  srn_resign_v2.go:24
+M  (*srnResignV2) Category() TaskCategory  srn_resign_v2.go:26
+M  (*srnResignV2) Run(Context) error  srn_resign_v2.go:34  // Run iterates all KindSubtitle (1001) events belonging to this node's ...
+
+### pkg: `internal/proxy`
+F  BuildTorznabQuery(string,int) string  torznab.go:26  // BuildTorznabQuery constructs a Prowlarr/Torznab search query string f...
+T  ProwlarrItem{Title,MagnetURL,GUID}  torznab.go:87  // ProwlarrItem represents a single search result from Prowlarr.
+T  FissionSearchOptions{ChineseTitle,TVDBID,IMDBID,OriginalQ,Season,Episode}  torznab.go:94  // FissionSearchOptions configures a Prowlarr fission search.
+F  ExecuteProwlarrFissionSearch(FissionSearchOptions) ([]ProwlarrItem,*Document,error)  torznab.go:105  // ExecuteProwlarrFissionSearch performs a tiered search on Prowlarr (Ep...
+F  TorznabProxy(*Context)  torznab.go:226
+F  TVDBMitmProxy(*Context)  tvdb.go:25
+
+### pkg: `internal/scheduler`
+T  Job{Name();Run()}  scheduler.go:14  // Job 是所有定时任务需要实现的接口。
+T  Triggerable{TriggerChan()}  scheduler.go:21  // Triggerable 是可手动触发的 Job 扩展接口。
+T  Scheduler{unexported}  scheduler.go:31  // Scheduler 管理一组定时任务，每个任务在独立 goroutine ...
+M  (*Scheduler) PauseWhen(func() string)  scheduler.go:43  // PauseWhen sets a predicate evaluated before each ticker-driven job run.
+F  New() *Scheduler  scheduler.go:50  // New 返回一个空的 Scheduler。
+M  (*Scheduler) Register(Job,Duration)  scheduler.go:55  // Register 注册一个 Job，interval 必须 > 0。
+M  (*Scheduler) Start(Context)  scheduler.go:67  // Start 启动所有已注册 Job 的 ticker goroutine。
+M  (*Scheduler) Stop()  scheduler.go:149  // Stop 取消所有 goroutine 并等待它们退出。
+T  SonarrSyncJob{unexported}  sonarr_sync.go:52  // SonarrSyncJob periodically syncs subtitles from SRN to the Sonarr med...
+F  NewSonarrSyncJob(*Client) *SonarrSyncJob  sonarr_sync.go:59  // NewSonarrSyncJob creates a new SonarrSyncJob with the given Sonarr cl...
+M  (*SonarrSyncJob) Name() string  sonarr_sync.go:68  // Name implements the Job interface.
+M  (*SonarrSyncJob) Run(Context)  sonarr_sync.go:72  // Run implements the Job interface.
+M  (*SonarrSyncJob) SearchEpisode(string,int) string  sonarr_sync.go:179  // SearchEpisode runs processEpisode for a single episode and returns th...
+M  (*SonarrSyncJob) QuerySubtitles(string,int) []map[string]interface{...}  sonarr_sync.go:192  // QuerySubtitles searches SRN (local → backend → cloud relay) for a...
+M  (*SonarrSyncJob) SetSubtitleSelection(string)  sonarr_sync.go:207  // SetSubtitleSelection records the user's choice of subtitle for a vide...
+
+### pkg: `internal/sonarr`
+T  Series{ID,Title,Path,TmdbID}  client.go:15  // Series represents a Sonarr series record.
+T  Episode{ID,SeasonNumber,EpisodeNumber,HasFile,EpisodeFileID}  client.go:23  // Episode represents a single Sonarr episode record.
+T  EpisodeFile{ID,Path,RelativePath}  client.go:32  // EpisodeFile holds the file path for a Sonarr episode file.
+T  Client{unexported}  client.go:39  // Client is a minimal Sonarr v3 API client.
+F  NewClient(string) *Client  client.go:45  // NewClient creates a new Sonarr API client.
+M  (*Client) GetAllSeries() ([]Series,error)  client.go:53  // GetAllSeries returns all series from Sonarr.
+M  (*Client) GetEpisodes(int) ([]Episode,error)  client.go:62  // GetEpisodes returns all episodes for a given series ID.
+M  (*Client) GetEpisodeFiles(int) (map[int]EpisodeFile,error)  client.go:71  // GetEpisodeFiles returns a map of episodeFileId → EpisodeFile for a ...
+M  (*Client) RescanSeries(int) error  client.go:84  // RescanSeries triggers a Sonarr rescan for a given series ID.
+F  SubtitlePath(string) string  client.go:133  // SubtitlePath returns the Sonarr-compatible subtitle file path for a g...
+
+### pkg: `internal/srn`
+T  Event{ID,PubKey,CreatedAt,Kind,Tags,ContentMD5,Sig,Filename}  event.go:15  // Event is the atomic unit of the Subtitle Relay Network.
+M  (*Event) UnmarshalJSON([]byte) error  event.go:32  // UnmarshalJSON handles two wire formats for Tags:
+M  (*Event) GetTag(string) string  event.go:71  // GetTag returns the value of the first tag with the given name.
+C  KindSubtitle  event.go:81
+C  KindRetract  event.go:82
+C  KindReplace  event.go:83
+C  KindKeyAlias  event.go:84
+C  KindBulkSalvage  event.go:85
+C  KindDegradation  event.go:86
+F  NewRetractEvent(string) *Event  event.go:90  // NewRetractEvent creates a Kind 1002 event to deactivate targetID.
+F  NewReplaceEvent(string,[][]string,string) *Event  event.go:103  // NewReplaceEvent creates a Kind 1003 event replacing prevID with new c...
+F  NewKeyAliasEvent(string) *Event  event.go:125  // NewKeyAliasEvent creates a Kind 1011 event declaring a human-readable...
+F  NewBulkSalvageEvent(string,[]string) *Event  event.go:139  // NewBulkSalvageEvent creates a Kind 1020 event to permanently remove d...
+M  (*Event) ComputeID() string  event.go:198  // ComputeID returns a deterministic SHA256 fingerprint of the event.
+M  (*Event) ComputeIDV2() string  event.go:205  // ComputeIDV2 returns the full SHA256 fingerprint (64 hex chars) of the...
+M  (*Event) Sign(PrivateKey) error  event.go:213  // Sign computes the event ID and signs the canonical message with the p...
+M  (*Event) Verify() bool  event.go:221  // Verify checks the signature against the canonical message.
+T  Provider{unexported}  provider.go:19  // Provider implements subtitles.SubtitleProvider + subtitles.SemanticPr...
+F  NewProvider() *Provider  provider.go:24  // NewProvider returns the SRN subtitle provider backed by the global lo...
+M  (*Provider) Name() string  provider.go:28
+M  (*Provider) Search(Values,string) ([]map[string]interface{...},error)  provider.go:30
+M  (*Provider) SearchByCacheKey(string,Values) ([]map[string]interface{...},error)  provider.go:37  // SearchByCacheKey parses a key in the form "title|Sn|En" and queries w...
+F  SetSRNKeyPatterns([]string)  provider.go:126  // SetSRNKeyPatterns (HIJARR CORE ASSET: Identification/Cleaning logic)
+F  ParseCacheKey(string) (string×2,int×2)  provider.go:143  // ParseCacheKey extracts title, tmdbID, season and ep from a cache key.
+T  ErrPermanentUpload{StatusCode,Body}  relay.go:27  // ErrPermanentUpload is returned when an upload failure cannot be fixed...
+M  (*ErrPermanentUpload) Error() string  relay.go:32
+F  SetNodeKey(PrivateKey)  relay.go:165  // SetNodeKey registers the node's Ed25519 identity key for signing outb...
+F  PublishToNetwork(*Event,[]byte,PrivateKey) error  relay.go:271  // PublishToNetwork signs and broadcasts an event to all configured SRN ...
+F  RetractEvent(string,PrivateKey) error  relay.go:368  // RetractEvent publishes a Kind 1002 event to retract a previously publ...
+F  ReplaceEvent(string,[][]string,[]byte,string,PrivateKey) error  relay.go:375  // ReplaceEvent publishes a Kind 1003 event to supersede a previous event.
+F  QueryNetwork(string,int) []Event  relay.go:384  // QueryNetwork searches all remote relays for subtitles and returns fil...
+F  QueryNetworkForLangs(string,[]SubtitleLanguage,int) []Event  relay.go:417  // QueryNetworkForLangs 按语言列表向所有 relay 查询字幕，�...
+T  RelayIdentity{PubKey,Name,Version,Description}  relay.go:470  // RelayIdentity represents the metadata of an SRN relay.
+F  QueryRelayIdentity(string) (*RelayIdentity,error)  relay.go:478  // QueryRelayIdentity fetches the identity of a relay.
+F  DownloadFromRelays(string) ([]byte,error)  relay.go:555  // DownloadFromRelays fetches subtitle content by event ID from remote r...
+T  Store{unexported}  store.go:17  // Store is the local SRN staging area (Queue) and cache.
+T  QueuedEvent{ID,Event,Data,PrivKey,CreatedAt,Attempts,LastError}  store.go:22  // QueuedEvent represents an event waiting to be broadcasted to the netw...
+F  GetStore(string) *Store  store.go:38  // GetStore returns the process-wide SRN Store singleton.
+M  (*Store) Enqueue(*Event,[]byte,[]byte) error  store.go:90  // Enqueue adds an event and its content to the local L2 buffer.
+M  (*Store) GetTasks(int) ([]*QueuedEvent,error)  store.go:105  // GetTasks retrieves events that are pending upload and past their retr...
+M  (*Store) MarkFailed(string,string,Duration)  store.go:137  // MarkFailed increments the attempt counter, records the error message,...
+M  (*Store) Remove(string)  store.go:148  // Remove deletes an event from the queue (usually after successful uplo...
+M  (*Store) UpdateEventJSON(string) error  store.go:157  // UpdateEventJSON replaces the stored event_json for an existing queue ...
+M  (*Store) ReplaceQueueID(string) error  store.go:168  // ReplaceQueueID atomically renames a queue entry from oldID to newID and
+M  (*Store) ScanByPubKey(string,func(string,*Event,[]byte,string) bool) error  store.go:187  // ScanByPubKey iterates all KindSubtitle (1001) events in srn_queue tha...
+T  QueryResult{ID,Filename,Title,Season,Ep,Lang}  store.go:220  // QueryResult is a row returned by Query.
+M  (*Store) Query(string,int) ([]QueryResult,error)  store.go:231  // Query finds subtitles in the local queue that haven't been uploaded yet.
+M  (*Store) QueryEvents(string,int,string) ([]Event,error)  store.go:274  // QueryEvents finds subtitles in the local queue and returns full Event...
+M  (*Store) GetContent(string) ([]byte,string,error)  store.go:353  // GetContent returns the raw subtitle bytes and filename for a given ev...
+M  (*Store) Stats() (int)  store.go:369  // Stats returns the number of items currently in the queue.
+M  (*Store) BacklogStatus(int) string  store.go:380  // BacklogStatus returns an empty string when immediately-eligible tasks...
+
+### pkg: `internal/state`
+T  Store{unexported}  store.go:14  // Store manages Hijarr's specific state tables like seen files, failed ...
+F  GetStore(string) *Store  store.go:24  // GetStore returns the process-wide state Store singleton.
+M  (*Store) DB() *DB  store.go:80  // DB exposes the underlying *sql.DB if transaction across packages is n...
+M  (*Store) SeenMtime(string) int64  store.go:85  // SeenMtime returns the previously recorded mtime (nanoseconds) for a f...
+M  (*Store) SetSeenMtime(string,Time)  store.go:95  // SetSeenMtime records the mtime for a file path so the next scan can s...
+T  SeenFileResult{Path,MtimeNS}  store.go:105  // SeenFileResult is one row from the seen_files table.
+M  (*Store) ListSeenFiles(string) ([]SeenFileResult,error)  store.go:112  // ListSeenFiles returns all rows from seen_files.
+M  (*Store) ClearAllSeenFiles() (int64,error)  store.go:139  // ClearAllSeenFiles removes every row from seen_files so DiskScan re-pr...
+M  (*Store) DeleteSeenFile(string) error  store.go:152  // DeleteSeenFile removes a single row from seen_files by path.
+M  (*Store) SetFailedFile(string)  store.go:161  // SetFailedFile records that processing path failed, so future scans ca...
+M  (*Store) IsFailedFile(string,Duration) bool  store.go:172  // IsFailedFile returns true if path failed processing within ttl duration.
+M  (*Store) ClearAllFailedFiles() (int64,error)  store.go:185  // ClearAllFailedFiles removes every row from failed_files so DiskScan r...
+M  (*Store) ClearFailedFile(string)  store.go:198  // ClearFailedFile removes a path from the failed_files cache (e.g., aft...
+T  FailedFileResult{Path,FailedAt}  store.go:206  // FailedFileResult is one row from the failed_files table.
+M  (*Store) ListFailedFiles() ([]FailedFileResult,error)  store.go:212  // ListFailedFiles returns all rows from failed_files.
+T  DBStats{SRNEvents,SRNTitles,SeenFiles}  store.go:233  // DBStats holds row counts for all tables in the shared SQLite database.
+M  (*Store) FullStats() DBStats  store.go:240  // FullStats queries all tables in the shared SQLite database and return...
+M  (*Store) GetIdentity(string) string  store.go:252  // GetIdentity returns a stored string value from global_state (e.g.
+M  (*Store) SetIdentity(string)  store.go:262  // SetIdentity stores or updates a string value in global_state.
+T  SubtitleSelection{ArchiveMD5,SubMD5}  store.go:272  // SubtitleSelection records which specific subtitle version from SRN wa...
+M  (*Store) GetSubtitleSelection(string) *SubtitleSelection  store.go:278  // GetSubtitleSelection returns the recorded MD5s for a video path.
+M  (*Store) SetSubtitleSelection(string)  store.go:291  // SetSubtitleSelection records the user's choice of subtitle for a vide...
+T  BlacklistEntry{EventHash,CacheKey,Reason,BlockedAt}  store.go:304  // BlacklistEntry is one row from the subtitle_blacklist table.
+M  (*Store) ListBlacklist() ([]BlacklistEntry,error)  store.go:312  // ListBlacklist returns all blacklisted event hashes.
+M  (*Store) AddBlacklist(string) error  store.go:332  // AddBlacklist adds an event hash to the blacklist.
+M  (*Store) RemoveBlacklist(string) error  store.go:344  // RemoveBlacklist removes an event hash from the blacklist.
+M  (*Store) IsBlacklisted(string) bool  store.go:353  // IsBlacklisted returns true if the event hash is in the blacklist.
+T  PinEntry{CacheKey,EventID,PinnedAt}  store.go:365  // PinEntry is one row from the subtitle_pins table.
+M  (*Store) ListPins() ([]PinEntry,error)  store.go:372  // ListPins returns all pinned cache keys.
+M  (*Store) SetPin(string) error  store.go:392  // SetPin pins a specific SRN event for a cache key.
+M  (*Store) RemovePin(string) error  store.go:404  // RemovePin removes the pin for a cache key.
+M  (*Store) GetPin(string) string  store.go:413  // GetPin returns the pinned event ID for a cache key, or "" if not pinned.
+
+### pkg: `internal/tmdb`
+T  TMDBInfo{Title,TMDBID}  client.go:16
+F  FetchSeriesInfo(string) (*TMDBInfo,error)  client.go:21
+F  FetchTMDBIDByExternalID(string) (int,error)  client.go:30  // FetchTMDBIDByExternalID performs a language-independent lookup from T...
+F  FetchEpisodeTitles(int) (map[int]string,error)  client.go:73
+F  FetchEpisodeTitle(int) string  client.go:113
+F  FetchSeasonName(int) (string,error)  client.go:122  // FetchSeasonName returns the localized name of a season (e.g.
+F  FetchSeriesInfoByQuery(string) (*TMDBInfo,error)  client.go:196  // FetchSeriesInfoByQuery returns the best-matching TMDB TV series for t...
+F  FetchSeriesSearchResults(string) ([]TMDBInfo,error)  client.go:208  // FetchSeriesSearchResults returns up to 5 TMDB TV series matches for a...
+F  FetchSeriesInfoByID(int) (*TMDBInfo,error)  client.go:216  // FetchSeriesInfoByID retrieves primary series information from TMDB.
+F  FetchTVDBID(int) (int,error)  client.go:248  // FetchTVDBID returns the TVDB ID for a TMDB series, or 0 if not found.
+F  FetchChineseTitleByQuery(string) (string,error)  client.go:277
+F  FetchSeriesAliases(int) ([]string,error)  client.go:287  // FetchSeriesAliases returns a list of all known titles (alternative an...
+F  FetchSeasonCount(int) int  client.go:351  // FetchSeasonCount returns the number of seasons for a TMDB series.
+
+### pkg: `internal/util`
+F  CalculateMD5([]byte) string  subtitle.go:16  // CalculateMD5 returns the hex MD5 hash of the given data.
+F  CalculateFileMD5(string) (string,error)  subtitle.go:22  // CalculateFileMD5 returns the hex MD5 hash of the file at the given path.
+F  FilenameFromURL(string) string  subtitle.go:38  // FilenameFromURL 从原始 URL 提取文件名：先剥离 query strin...
+V  SubtitleExts  subtitle.go:51  // SubtitleExts 是所有受支持的字幕文件扩展名。
+F  IsSubtitleFile(string) bool  subtitle.go:56  // IsSubtitleFile 报告给定文件名是否为字幕文件。
+V  JunkTitleKeywords  subtitle.go:61  // JunkTitleKeywords 是明确无字幕价值的包名/文件名关键�...
+F  IsJunkTitle(string) bool  subtitle.go:72  // IsJunkTitle 判断 title/filename 是否命中垃圾包黑名单（�...
+F  DetectSubtitleLang(string) string  subtitle.go:89  // DetectSubtitleLang 从文件名推断字幕语言标签。
+T  FileCategoryint  subtitle.go:139  // FileCategory classifies a subtitle file for recognition routing.
+C  CategoryNormal FileCategory  subtitle.go:142
+C  CategorySeason0  subtitle.go:143
+C  CategoryExtras  subtitle.go:144
+C  CategorySkip  subtitle.go:145
+F  ClassifySubtitleFile(string) FileCategory  subtitle.go:178  // ClassifySubtitleFile determines how a subtitle file should be routed for
+F  StripASSAttachments([]byte) []byte  subtitle.go:206  // StripASSAttachments removes [Fonts] and [Graphics] sections from ASS ...
+F  DeduplicateStrings([]string) []string  subtitle.go:239  // DeduplicateStrings 对字符串切片去重（保留顺序），跳�...
+F  ExtractGroup(string) string  subtitle.go:252  // ExtractGroup attempts to identify the release group from a filename (...
+F  ExtractResolution(string) string  subtitle.go:264  // ExtractResolution attempts to identify quality markers like 1080p, 72...
+
+### pkg: `internal/web`
+F  SetJobsInfo([]map[string]string)  api.go:30  // SetJobsInfo stores the list of registered scheduler jobs for the /job...
+F  SetNodePublicKey(string)  api.go:35  // SetNodePublicKey stores the node's Ed25519 public key (hex) for the /...
+F  RegisterRoutes(*Engine)  api.go:37
+T  EpisodeSearcher{SearchEpisode();SetSubtitleSelection();QuerySubtitles()}  media_library.go:23  // EpisodeSearcher is implemented by scheduler.SonarrSyncJob.
+F  SetSonarrClient(*Client)  media_library.go:33  // SetSonarrClient injects the Sonarr API client for the media library h...
+F  SetSonarrSearcher(EpisodeSearcher)  media_library.go:36  // SetSonarrSearcher injects the episode searcher (SonarrSyncJob) for ma...
+T  EpisodeStatus{Ep,VideoPath,HasSub,SubPath,SubMD5,SelectedSubMD5,ArchiveMD5}  media_library.go:39  // EpisodeStatus is the per-episode data returned by the media library d...
+T  SeasonStatus{Season,Total,HasSub,Episodes}  media_library.go:50  // SeasonStatus aggregates episode data for one season.
+T  SeriesDetail{SeriesID,Title,LocalTitle,TMDBID,Seasons}  media_library.go:58  // SeriesDetail is the full detail response for one series.
+
+## §6 Config Index  (internal/config/config.go)
+
+| Var | Env | Default |
+|-----|-----|---------|
+| `TMDBAPIKey` | `TMDB_API_KEY` | `""` |
+| `TargetLanguage` | `TARGET_LANGUAGE` | `zh-CN` |
+| `TVDBLanguage` | `TVDB_LANGUAGE` | `zho` |
+| `AssrtAPIToken` | `ASSRT_API_TOKEN` | `""` |
+| `AssrtRateLimit float64` | `ASSRT_RATE_LIMIT` | `2.0` |
+| `SubtitleSearchTimeout Duration` | `SUBTITLE_SEARCH_TIMEOUT` | `3s` |
+| `CacheDBPath` | `CACHE_DB_PATH` | `/data/hijarr.db` |
+| `LocalDownloadPaths` | `LOCAL_DOWNLOAD_PATHS` | `"" (CSV)` |
+| `DiskScanInterval Duration` | `DISK_SCAN_INTERVAL` | `0=disabled` |
+| `DiskScanLogDir` | `DISK_SCAN_LOG_DIR` | `/data/logs` |
+| `DiskScanFailTTL Duration` | `DISK_SCAN_FAIL_TTL` | `168h` |
+| `QBitURL/User/Pass` | `QBIT_URL/USER/PASS` | `""` |
+| `QBitMaxJobs int` | `QBIT_MAX_JOBS` | `2` |
+| `RSSFeeds []string` | `RSS_FEEDS` | `"" (CSV)` |
+| `RSSFeedInterval Duration` | `RSS_SCAN_INTERVAL` | `1h` |
+| `SonarrURL/APIKey` | `SONARR_URL/API_KEY` | `""` |
+| `SonarrSyncInterval Duration` | `SONARR_SYNC_INTERVAL` | `5m` |
+| `SonarrPathPrefix/LocalPathPrefix` | `SONARR/LOCAL_PATH_PREFIX` | `""` |
+| `LLMAPIKey/BaseURL/Model` | `LLM_API_KEY/BASE_URL/MODEL` | `openai defaults` |
+| `ProwlarrTargetURL/APIKey` | `PROWLARR_TARGET_URL/API_KEY` | `prowlarr:9696` |
+
+## §7 Package Dependency Graph  (internal/* imports only)
+
+```
+cmd/hijarr                               → internal/cache, internal/config, internal/logger, internal/maintenance, internal/metrics, internal/migrations, internal/proxy, internal/scheduler, internal/sonarr, internal/srn, internal/state, internal/web
+internal/cache                           → internal/db, internal/logger
+internal/maintenance                     → internal/db
+internal/migrations                      → internal/config, internal/maintenance, internal/srn
+internal/proxy                           → internal/config, internal/logger, internal/tmdb
+internal/scheduler                       → internal/config, internal/logger, internal/sonarr, internal/srn, internal/state, internal/tmdb, internal/util
+internal/srn                             → internal/config, internal/db, internal/logger, internal/metrics
+internal/state                           → internal/db
+internal/tmdb                            → internal/cache, internal/config
+internal/web                             → internal/cache, internal/config, internal/db, internal/metrics, internal/sonarr, internal/srn, internal/state, internal/tmdb, internal/util
+
+Leaf pkgs (no internal deps): db, util, config, logger, metrics
+```
+
+## §8 Patterns & Architecture
+
+```
+SINGLETON (sync.Once):
+  cache.GetSubtitleCache(dbPath) → *SubtitleCache   [subtitle_cache.go]
+  cache.GetMetadataCache(dbPath) → *MetadataCache   [metadata_cache.go]
+  srn.GetStore(dbPath)           → *Store           [store.go]
+  All three share the SAME SQLite file (CACHE_DB_PATH).
+
+INTERFACE IMPLEMENTORS:
+  subtitles.SubtitleProvider  ← AssrtProvider, CircuitBreakerProvider,
+                                 SRNProvider, ProwlarrProvider
+  subtitles.SemanticProvider  ← SRNProvider, ProwlarrProvider
+  scheduler.Job               ← DiskScanJob, RSSFeedJob, SonarrSyncJob
+  scheduler.Triggerable       ← DiskScanJob (only)
+
+INJECTION WIRING (cmd/hijarr/main.go):
+  proxy.OnLocalMiss        = diskJob.Trigger          // SRN miss → disk scan
+  debug.SetDiskJob(diskJob)                           // /correct/reingest → ForgetFile
+  proxy.AppendProvider(NewProwlarrProvider(rssJob))   // cache miss → Prowlarr async
+
+SUBTITLE REQUEST PIPELINE:
+  Bazarr → AssrtMitmProxy → parseAndTranslateQuery → BuildQueries
+    → AggregateSearch[SRNProvider, CircuitBreakerProvider(Assrt), ProwlarrProvider?]
+    → FeedSync(download+unpack+Publish) → WashSubtitles → JSON
+
+inFlight sync.Map RULE:
+  Used in srn/feeder.go for concurrent download dedup.
+  MUST Delete() immediately after use in loop — NOT with defer.
+
+CACHE KEY FORMAT:
+  subtitle_cache key = BuildCacheKey(title,season,ep) = 'title|S{n}|E{n}'
+  srn_events query: (tmdb_id,season,ep) primary; fallback (title,season,ep)
+```
+
+## §9 Hard Constraints (NEVER violate)
+
+```
+1. CGO_ENABLED=0 always — Intel ICC compiler incompatibility
+2. No static Gin routes alongside /*path — causes panic
+   (use NoRoute catch-all, dispatch by path inside handler)
+3. No defer inside for-loop to release inFlight sync.Map keys — goroutine leak
+4. Do NOT cache empty or unvalidated subtitle results
+5. Do NOT trigger Assrt circuit breaker from FeedSync/qBit download failures
+   (only CircuitBreakerProvider should call subtitles/status.SetAssrtBackoff)
+6. DiskScanJob: skip files > 50MB (maxDiskScanFileBytes cap — OOM prevention)
+7. All SQLite via db.Open() — not sql.Open("sqlite",...) directly
+8. modernc.org/sqlite is pure Go — do not add CGO sqlite drivers
+9. Do not register new Gin routes outside web.RegisterRoutes()
+10. SonarrSyncInterval minimum = 5m to avoid Sonarr API hammering
+```
+
+## §10 Changelog
+
+| Date | Op | Detail |
+|------|----|--------|
+| 2026-04-18 | REGEN | 28 files 6006L |

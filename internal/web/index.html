@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hijarr Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 font-sans">
+    <div id="app" class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-800 text-white flex flex-col">
+            <div class="p-4 text-2xl font-bold text-center border-b border-gray-700">
+                Hijarr
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="#" @click="currentTab = 'config'" :class="{'bg-gray-700': currentTab === 'config'}" class="block p-2 rounded hover:bg-gray-700 transition">Config</a>
+                <a href="#" @click="currentTab = 'status'" :class="{'bg-gray-700': currentTab === 'status'}" class="block p-2 rounded hover:bg-gray-700 transition">Status</a>
+                <a href="#" @click="currentTab = 'jobs'" :class="{'bg-gray-700': currentTab === 'jobs'}" class="block p-2 rounded hover:bg-gray-700 transition">Jobs</a>
+                <a href="#" @click="currentTab = 'stats'" :class="{'bg-gray-700': currentTab === 'stats'}" class="block p-2 rounded hover:bg-gray-700 transition">Stats</a>
+                <a href="#" @click="currentTab = 'llm'" :class="{'bg-gray-700': currentTab === 'llm'}" class="block p-2 rounded hover:bg-gray-700 transition">LLM Usages</a>
+                <a href="#" @click="currentTab = 'srn'" :class="{'bg-gray-700': currentTab === 'srn'}" class="block p-2 rounded hover:bg-gray-700 transition">SRN Management</a>
+                <a href="#" @click="currentTab = 'media'" :class="{'bg-gray-700': currentTab === 'media'}" class="block p-2 rounded hover:bg-gray-700 transition">Media Library</a>
+                <a href="#" @click="currentTab = 'db'" :class="{'bg-gray-700': currentTab === 'db'}" class="block p-2 rounded hover:bg-gray-700 transition">DB Manager</a>
+                <a href="/parser" class="block p-2 rounded hover:bg-gray-700 transition text-blue-300">Parser Config -></a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col h-screen overflow-y-auto">
+            <header class="bg-white shadow p-4">
+                <h1 class="text-xl font-bold capitalize">{{ currentTab.replace('-', ' ') }}</h1>
+            </header>
+            <div class="p-6 flex-1">
+
+                <!-- Config Tab -->
+                <div v-if="currentTab === 'config'" class="bg-white rounded-lg shadow overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr v-for="(value, key) in configData" :key="key">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ key }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 break-words">{{ value || '-' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <button @click="fetchConfig" class="m-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Refresh</button>
+                </div>
+
+                <!-- Status Tab -->
+                <div v-if="currentTab === 'status'" class="bg-white rounded-lg shadow p-6 space-y-4">
+                    <div><span class="font-bold text-gray-700">Version:</span> {{ statusData.version }}</div>
+                    <div><span class="font-bold text-gray-700">Uptime:</span> {{ statusData.uptime }}</div>
+                    <div><span class="font-bold text-gray-700">Start Time:</span> {{ statusData.start_time }}</div>
+                    <button @click="fetchStatus" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Refresh</button>
+                </div>
+
+                <!-- Jobs Tab -->
+                <div v-if="currentTab === 'jobs'" class="bg-white rounded-lg shadow overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Interval</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr v-for="job in jobsData" :key="job.name">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ job.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ job.interval }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <button @click="fetchJobs" class="m-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Refresh</button>
+                </div>
+
+                <!-- Stats Tab -->
+                <div v-if="currentTab === 'stats'" class="bg-white rounded-lg shadow overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Metric</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr v-for="(value, key) in statsData" :key="key">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ key }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ value }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <button @click="fetchStats" class="m-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Refresh</button>
+                </div>
+
+                <!-- LLM Usages Tab -->
+                <div v-if="currentTab === 'llm'" class="bg-white rounded-lg shadow p-6 space-y-4">
+                    <div><span class="font-bold text-gray-700">Total Requests:</span> {{ llmData.llm_requests }}</div>
+                    <div><span class="font-bold text-gray-700">Total Errors:</span> {{ llmData.llm_errors }}</div>
+                    <button @click="fetchLLM" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Refresh</button>
+                </div>
+
+                <!-- SRN Management Tab -->
+                <div v-if="currentTab === 'srn'" class="space-y-4">
+                    <!-- Sub-tab nav -->
+                    <div class="bg-white rounded-lg shadow p-1 flex gap-1 flex-wrap">
+                        <button v-for="st in srnSubTabs" :key="st.key"
+                            @click="srnTab = st.key"
+                            :class="srnTab === st.key ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
+                            class="px-4 py-2 rounded text-sm font-medium transition">
+                            {{ st.label }}
+                            <span v-if="st.count !== null" class="ml-1 text-xs opacity-75">({{ st.count }})</span>
+                        </button>
+                    </div>
+
+                    <!-- ── Failed Files ── -->
+                    <div v-if="srnTab === 'failed'" class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4 border-b flex justify-between items-center">
+                            <h2 class="text-lg font-bold">Failed Ingestions</h2>
+                            <div class="flex gap-2">
+                                <button @click="fetchFailedFiles" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm">Refresh</button>
+                                <button v-if="failedFiles.length > 0" @click="clearAllFailedFiles" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 text-sm">Clear All</button>
+                            </div>
+                        </div>
+                        <div class="p-4 text-gray-500 text-sm" v-if="failedFiles.length === 0">No failed files.</div>
+                        <table v-else class="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Path</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Failed At</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <tr v-for="file in failedFiles" :key="file.path">
+                                    <td class="px-4 py-3 text-gray-900 break-all">{{ file.path }}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ fmtTime(file.failed_at) }}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap space-x-3">
+                                        <button @click="openReingestModal(file.path)" class="text-indigo-600 hover:text-indigo-900 font-medium">Reingest</button>
+                                        <button @click="deleteFailedFile(file.path)" class="text-red-500 hover:text-red-700 font-medium">Delete</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ── SRN Events ── -->
+                    <div v-if="srnTab === 'events'" class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4 border-b flex flex-wrap gap-2 items-end">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Title</label>
+                                <input v-model="evFilter.title" @keyup.enter="fetchEvents" placeholder="filter…" class="border border-gray-300 rounded px-2 py-1 text-sm w-40">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Season</label>
+                                <input v-model.number="evFilter.season" type="number" min="0" class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Ep</label>
+                                <input v-model.number="evFilter.ep" type="number" min="0" class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
+                            </div>
+                            <button @click="fetchEvents" class="bg-blue-500 text-white px-3 py-1.5 rounded hover:bg-blue-600 text-sm">Search</button>
+                        </div>
+                        <div class="p-4 text-gray-500 text-sm" v-if="srnEvents.length === 0">No events found.</div>
+                        <div v-else>
+                            <!-- Level 1: Title -->
+                            <div v-for="group in eventsByTitle" :key="group.title" class="border-b last:border-b-0">
+                                <div class="px-4 py-2 bg-gray-100 flex justify-between items-center cursor-pointer select-none hover:bg-gray-200"
+                                     @click="toggleEvTitle(group.title)">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-gray-400 text-xs w-3">{{ evOpenTitles.has(group.title) ? '▼' : '▶' }}</span>
+                                        <span class="font-semibold text-sm text-gray-800">{{ group.title }}</span>
+                                        <span class="text-xs text-gray-400">({{ group.totalEps }} eps, {{ group.seasons.length }} seasons)</span>
+                                    </div>
+                                    <button @click.stop="deleteEvTitle(group.title)" class="text-red-500 hover:text-red-700 text-xs font-medium">Delete all</button>
+                                </div>
+                                <!-- Level 2: Season -->
+                                <div v-if="evOpenTitles.has(group.title)">
+                                    <div v-for="s in group.seasons" :key="s.season" class="border-t border-gray-100">
+                                        <div class="px-8 py-1.5 bg-gray-50 flex justify-between items-center cursor-pointer select-none hover:bg-gray-100"
+                                             @click="toggleEvSeason(group.title, s.season)">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-gray-400 text-xs w-3">{{ evOpenSeasons.has(group.title+':'+s.season) ? '▼' : '▶' }}</span>
+                                                <span class="text-sm font-medium text-gray-700">Season {{ s.season }}</span>
+                                                <span class="text-xs text-gray-400">({{ s.episodes.length }} eps)</span>
+                                            </div>
+                                            <button @click.stop="deleteEvSeason(group.title, s.season)" class="text-red-500 hover:text-red-700 text-xs font-medium">Delete season</button>
+                                        </div>
+                                        <!-- Level 3: Episodes -->
+                                        <table v-if="evOpenSeasons.has(group.title+':'+s.season)" class="min-w-full text-sm border-t border-gray-100">
+                                            <thead class="bg-gray-50">
+                                                <tr>
+                                                    <th class="pl-14 pr-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ep</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Lang</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Filename</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100">
+                                                <tr v-for="ev in s.episodes" :key="ev.id" class="hover:bg-gray-50">
+                                                    <td class="pl-14 pr-4 py-2 whitespace-nowrap text-gray-600 font-mono">E{{ String(ev.ep).padStart(2,'0') }}</td>
+                                                    <td class="px-4 py-2 whitespace-nowrap text-gray-600">{{ ev.lang }}</td>
+                                                    <td class="px-4 py-2 text-gray-600 max-w-xs truncate" :title="ev.filename">{{ ev.filename }}</td>
+                                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ fmtBytes(ev.size_bytes) }}</td>
+                                                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ fmtTime(ev.created_at) }}</td>
+                                                    <td class="px-4 py-2 whitespace-nowrap">
+                                                        <button @click="deleteEvent(ev.id)" class="text-red-500 hover:text-red-700 font-medium text-sm">Delete</button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Subtitle Cache ── -->
+                    <div v-if="srnTab === 'cache'" class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4 border-b flex justify-between items-center">
+                            <h2 class="text-lg font-bold">Subtitle Cache <span class="text-sm font-normal text-gray-500">({{ cacheEntries.length }} entries)</span></h2>
+                            <button @click="fetchCache" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm">Refresh</button>
+                        </div>
+                        <div class="p-4 text-gray-500 text-sm" v-if="cacheEntries.length === 0">Cache is empty.</div>
+                        <div v-else>
+                            <!-- Group by title -->
+                            <div v-for="(entries, title) in cacheByTitle" :key="title" class="border-b last:border-b-0">
+                                <div class="px-4 py-2 bg-gray-50 flex justify-between items-center cursor-pointer select-none"
+                                     @click="toggleCacheGroup(title)">
+                                    <span class="font-medium text-sm text-gray-800">{{ title }} <span class="text-gray-400 font-normal">({{ entries.length }})</span></span>
+                                    <div class="flex gap-3 items-center">
+                                        <button @click.stop="deleteCacheByTitle(title)" class="text-red-500 hover:text-red-700 text-xs font-medium">Delete all</button>
+                                        <span class="text-gray-400 text-xs">{{ cacheOpenGroups.has(title) ? '▲' : '▼' }}</span>
+                                    </div>
+                                </div>
+                                <table v-if="cacheOpenGroups.has(title)" class="min-w-full text-sm">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Key</th>
+                                            <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Results</th>
+                                            <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Updated</th>
+                                            <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100">
+                                        <tr v-for="e in entries" :key="e.key">
+                                            <td class="px-6 py-2 text-gray-600 font-mono text-xs max-w-md truncate" :title="e.key">{{ e.key }}</td>
+                                            <td class="px-6 py-2 text-gray-600">{{ e.count }}</td>
+                                            <td class="px-6 py-2 whitespace-nowrap text-gray-500">{{ fmtTime(e.updated_at) }}</td>
+                                            <td class="px-6 py-2 whitespace-nowrap">
+                                                <button @click="deleteCacheEntry(e.key)" class="text-red-500 hover:text-red-700 font-medium text-xs">Delete</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Seen RSS ── -->
+                    <div v-if="srnTab === 'rss'" class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4 border-b flex justify-between items-center">
+                            <h2 class="text-lg font-bold">Seen RSS GUIDs <span class="text-sm font-normal text-gray-500">({{ seenRSS.length }})</span></h2>
+                            <button @click="fetchSeenRSS" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm">Refresh</button>
+                        </div>
+                        <div class="p-4 text-gray-500 text-sm" v-if="seenRSS.length === 0">No RSS GUIDs seen yet.</div>
+                        <div v-else class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                            <div v-for="guid in seenRSS" :key="guid" class="px-4 py-2 flex justify-between items-center hover:bg-gray-50">
+                                <span class="text-sm text-gray-700 font-mono break-all mr-4">{{ guid }}</span>
+                                <button @click="deleteRSS(guid)" class="text-red-500 hover:text-red-700 text-xs font-medium flex-shrink-0">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Regex Patterns ── -->
+                    <div v-if="srnTab === 'patterns'" class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4 border-b flex flex-wrap gap-2 items-end justify-between">
+                            <div class="flex gap-2 items-end">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Name filter</label>
+                                    <input v-model="patternFilter" @keyup.enter="fetchPatterns" placeholder="filter…" class="border border-gray-300 rounded px-2 py-1 text-sm w-48">
+                                </div>
+                                <button @click="fetchPatterns" class="bg-blue-500 text-white px-3 py-1.5 rounded hover:bg-blue-600 text-sm">Search</button>
+                            </div>
+                            <div class="flex gap-2 items-center">
+                                <button v-if="selectedPatterns.size > 0" @click="deleteSelectedPatterns"
+                                    class="bg-red-500 text-white px-3 py-1.5 rounded hover:bg-red-600 text-sm">
+                                    Delete Selected ({{ selectedPatterns.size }})
+                                </button>
+                                <button @click="clearAllPatterns" class="bg-red-700 text-white px-3 py-1.5 rounded hover:bg-red-800 text-sm">Clear All</button>
+                            </div>
+                        </div>
+                        <div class="p-4 text-gray-500 text-sm" v-if="patterns.length === 0">No patterns cached yet.</div>
+                        <div v-else class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 w-8">
+                                            <input type="checkbox" :checked="allPatternsSelected" @change="toggleSelectAllPatterns"
+                                                class="rounded border-gray-300 text-indigo-600">
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pattern</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Updated</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr v-for="p in patterns" :key="p.source_type+':'+p.source_key" class="hover:bg-gray-50"
+                                        :class="selectedPatterns.has(p.source_type+':'+p.source_key) ? 'bg-indigo-50' : ''">
+                                        <td class="px-4 py-2">
+                                            <input type="checkbox"
+                                                :checked="selectedPatterns.has(p.source_type+':'+p.source_key)"
+                                                @change="togglePatternSelect(p)"
+                                                class="rounded border-gray-300 text-indigo-600">
+                                        </td>
+                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500 text-xs">{{ p.source_type }}</td>
+                                        <td class="px-4 py-2 text-gray-900 max-w-xs truncate" :title="p.source_key">{{ p.original_name }}</td>
+                                        <td class="px-4 py-2 max-w-md">
+                                            <div v-if="editingPattern && editingPattern.key === p.source_type+':'+p.source_key">
+                                                <textarea v-model="editingPattern.value" rows="3"
+                                                    class="w-full border border-indigo-400 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"></textarea>
+                                                <div v-if="editingPattern.error" class="text-red-500 text-xs mt-1">{{ editingPattern.error }}</div>
+                                                <div class="flex gap-2 mt-1">
+                                                    <button @click="savePattern(p)" class="bg-indigo-600 text-white px-2 py-0.5 rounded text-xs hover:bg-indigo-700">Save</button>
+                                                    <button @click="editingPattern = null" class="text-gray-500 text-xs hover:text-gray-700">Cancel</button>
+                                                </div>
+                                            </div>
+                                            <code v-else class="text-xs text-gray-700 font-mono break-all cursor-pointer hover:text-indigo-700"
+                                                  :title="p.pattern" @click="startEditPattern(p)">{{ p.pattern }}</code>
+                                        </td>
+                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ fmtTime(p.updated_at) }}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap space-x-3">
+                                            <button @click="startEditPattern(p)" class="text-indigo-600 hover:text-indigo-900 font-medium text-sm">Edit</button>
+                                            <button @click="deletePattern(p)" class="text-red-500 hover:text-red-700 font-medium text-sm">Delete</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ── Seen Files ── -->
+                    <div v-if="srnTab === 'seen'" class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4 border-b flex justify-between items-center gap-2">
+                            <h2 class="text-lg font-bold">Seen Files</h2>
+                            <div class="flex gap-2 flex-1 max-w-sm">
+                                <input v-model="seenFilter" @keyup.enter="fetchSeenFiles" placeholder="path filter…" class="flex-1 border border-gray-300 rounded px-2 py-1 text-sm">
+                                <button @click="fetchSeenFiles" class="bg-blue-500 text-white px-3 py-1.5 rounded hover:bg-blue-600 text-sm">Search</button>
+                            </div>
+                            <button v-if="seenFiles.length > 0" @click="clearAllSeenFiles" class="bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700 text-sm">Clear All</button>
+                        </div>
+                        <div class="p-4 text-gray-500 text-sm" v-if="seenFiles.length === 0">No seen files.</div>
+                        <div v-else class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Path</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mtime</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr v-for="f in seenFiles" :key="f.path">
+                                        <td class="px-4 py-2 text-gray-900 break-all">{{ f.path }}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap text-gray-500">{{ fmtNano(f.mtime_ns) }}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap">
+                                            <button @click="deleteSeenFile(f.path)" class="text-red-500 hover:text-red-700 font-medium text-sm">Delete</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Media Library Tab -->
+                <div v-if="currentTab === 'media'" class="space-y-3">
+                    <!-- Toolbar -->
+                    <div class="bg-white rounded-lg shadow p-4 flex flex-wrap gap-2 items-center justify-between">
+                        <div class="flex gap-2 items-center">
+                            <input v-model="mediaFilter" placeholder="Filter series…" class="border border-gray-300 rounded px-3 py-1.5 text-sm w-56">
+                            <button @click="fetchMediaLibrary" :disabled="mediaLoadingAll"
+                                class="bg-blue-500 text-white px-3 py-1.5 rounded hover:bg-blue-600 text-sm disabled:opacity-50">
+                                {{ mediaLoadingAll ? 'Loading…' : 'Refresh' }}
+                            </button>
+                        </div>
+                        <span v-if="!mediaConfigured" class="text-sm text-red-500">Sonarr not configured (SONARR_URL not set)</span>
+                        <span v-else class="text-xs text-gray-400">{{ filteredMediaSeries.length }} series</span>
+                    </div>
+
+                    <!-- Series list -->
+                    <div class="bg-white rounded-lg shadow overflow-hidden" v-if="mediaConfigured && filteredMediaSeries.length > 0">
+                        <!-- Level 1: Series -->
+                        <div v-for="s in filteredMediaSeries" :key="s.id" class="border-b last:border-b-0">
+                            <div class="px-4 py-3 flex justify-between items-center cursor-pointer select-none hover:bg-gray-50"
+                                 @click="toggleMediaSeries(s.id)">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-gray-400 text-xs w-3">{{ mediaOpenSeries.has(s.id) ? '▼' : '▶' }}</span>
+                                    <span class="font-medium text-gray-800">{{ s.title }}</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span v-if="mediaSeriesData[s.id]" class="text-xs text-gray-500">
+                                        {{ mediaSeriesData[s.id].seasons.reduce((a,s)=>a+s.has_sub,0) }}
+                                        /
+                                        {{ mediaSeriesData[s.id].seasons.reduce((a,s)=>a+s.total,0) }}
+                                        with subs
+                                    </span>
+                                    <span v-if="mediaLoadingSeries.has(s.id)" class="text-xs text-blue-400">Loading…</span>
+                                    <button v-if="mediaOpenSeries.has(s.id) && mediaSeriesData[s.id]"
+                                        @click.stop="loadMediaSeries(s.id)"
+                                        class="text-xs text-blue-500 hover:text-blue-700">Refresh</button>
+                                </div>
+                            </div>
+
+                            <!-- Level 2: Seasons -->
+                            <div v-if="mediaOpenSeries.has(s.id) && mediaSeriesData[s.id]">
+                                <div v-for="season in mediaSeriesData[s.id].seasons" :key="season.season" class="border-t border-gray-100">
+                                    <div class="px-8 py-2 bg-gray-50 flex justify-between items-center cursor-pointer select-none hover:bg-gray-100"
+                                         @click="toggleMediaSeason(s.id, season.season)">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-gray-400 text-xs w-3">{{ mediaOpenSeasons.has(s.id+':'+season.season) ? '▼' : '▶' }}</span>
+                                            <span class="text-sm font-medium text-gray-700">Season {{ season.season }}</span>
+                                            <span :class="season.has_sub === season.total ? 'text-green-600' : 'text-amber-600'"
+                                                  class="text-xs font-medium">
+                                                {{ season.has_sub }}/{{ season.total }}
+                                            </span>
+                                        </div>
+                                        <button v-if="season.has_sub < season.total"
+                                            @click.stop="searchSeasonMissing(s, season)"
+                                            :disabled="mediaSearchingSeason.has(s.id+':'+season.season)"
+                                            class="text-xs bg-indigo-500 text-white px-2 py-0.5 rounded hover:bg-indigo-600 disabled:opacity-50">
+                                            {{ mediaSearchingSeason.has(s.id+':'+season.season) ? 'Searching…' : 'Search All Missing' }}
+                                        </button>
+                                    </div>
+
+                                    <!-- Level 3: Episodes -->
+                                    <table v-if="mediaOpenSeasons.has(s.id+':'+season.season)" class="min-w-full text-sm border-t border-gray-100">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="pl-14 pr-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ep</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Video File</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Subtitle</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            <tr v-for="ep in season.episodes" :key="ep.ep" class="hover:bg-gray-50">
+                                                <td class="pl-14 pr-4 py-2 whitespace-nowrap text-gray-600 font-mono">E{{ String(ep.ep).padStart(2,'0') }}</td>
+                                                <td class="px-4 py-2 text-gray-600 max-w-sm truncate text-xs" :title="ep.video_path">{{ ep.video_path.split('/').pop() }}</td>
+                                                <td class="px-4 py-2 whitespace-nowrap">
+                                                    <span v-if="ep.has_sub" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">✓ Has sub</span>
+                                                    <span v-else class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">✗ Missing</span>
+                                                </td>
+                                                <td class="px-4 py-2 whitespace-nowrap">
+                                                    <button v-if="!ep.has_sub"
+                                                        @click="searchEpisode(s, season.season, ep)"
+                                                        :disabled="mediaSearchingEp.has(ep.video_path)"
+                                                        class="text-xs text-indigo-600 hover:text-indigo-900 font-medium disabled:opacity-40">
+                                                        {{ mediaSearchingEp.has(ep.video_path) ? 'Searching…' : 'Search' }}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="mediaConfigured && !mediaLoadingAll && filteredMediaSeries.length === 0" class="bg-white rounded-lg shadow p-6 text-gray-500 text-sm text-center">
+                        No series found.
+                    </div>
+                </div>
+
+                <!-- DB Manager Tab -->
+                <div v-if="currentTab === 'db'" class="space-y-4">
+                    <div class="bg-white rounded-lg shadow p-1 flex gap-1 flex-wrap">
+                        <button v-for="st in dbSubTabs" :key="st.key"
+                            @click="db.tab = st.key; loadDbTab(st.key)"
+                            :class="db.tab === st.key ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
+                            class="px-3 py-1.5 rounded text-sm font-medium transition">
+                            {{ st.label }} <span class="ml-1 text-xs opacity-70">({{ st.count }})</span>
+                        </button>
+                    </div>
+
+                    <!-- ── Metadata Cache ── -->
+                    <div v-if="db.tab === 'mc'" class="bg-white rounded-lg shadow">
+                        <div class="p-3 border-b flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <input v-model="db.mc.q" @keyup.enter="fetchMC" placeholder="Search title…" class="border rounded px-2 py-1.5 text-sm w-52">
+                                <button @click="fetchMC" class="bg-blue-500 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-600">Search</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button v-if="db.mc.sel.size" @click="mcDeleteSelected" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Del ({{ db.mc.sel.size }})</button>
+                                <button @click="mcClearAll" class="bg-red-700 text-white px-3 py-1.5 rounded text-sm hover:bg-red-800">Clear All</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 w-8"><input type="checkbox" @change="toggleDbSelAll(db.mc, db.mc.rows.map(r=>r.raw_title))" :checked="db.mc.rows.length>0 && db.mc.rows.every(r=>db.mc.sel.has(r.raw_title))" class="rounded"></th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Raw Title</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">TMDB</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">S/E</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Updated</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr v-if="db.mc.rows.length===0"><td colspan="7" class="px-3 py-4 text-center text-gray-400 text-sm">No entries.</td></tr>
+                                    <tr v-for="r in db.mc.rows" :key="r.raw_title" :class="db.mc.sel.has(r.raw_title) ? 'bg-indigo-50' : 'hover:bg-gray-50'">
+                                        <td class="px-3 py-2"><input type="checkbox" :checked="db.mc.sel.has(r.raw_title)" @change="toggleDbSel(db.mc, r.raw_title)" class="rounded"></td>
+                                        <td class="px-3 py-2 max-w-xs truncate text-xs text-gray-500" :title="r.raw_title">{{ r.raw_title }}</td>
+                                        <td class="px-3 py-2 font-medium text-gray-900">{{ r.title }}</td>
+                                        <td class="px-3 py-2 text-gray-500">{{ r.tmdb_id || '-' }}</td>
+                                        <td class="px-3 py-2 text-gray-500 whitespace-nowrap">S{{ r.season }}/E{{ r.episode }}</td>
+                                        <td class="px-3 py-2 text-gray-400 text-xs whitespace-nowrap">{{ fmtTime(r.updated_at) }}</td>
+                                        <td class="px-3 py-2 whitespace-nowrap space-x-2">
+                                            <button @click="mcStartEdit(r)" class="text-indigo-600 hover:text-indigo-900 font-medium">Edit</button>
+                                            <button @click="mcDeleteOne(r.raw_title)" class="text-red-500 hover:text-red-700 font-medium">Del</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 border-t flex items-center justify-between text-sm text-gray-500">
+                            <span>{{ db.mc.total }} records</span>
+                            <div class="flex gap-1 items-center">
+                                <button @click="dbGoPage(db.mc, db.mc.page-1, fetchMC)" :disabled="db.mc.page<=1" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&lt;</button>
+                                <span class="px-3">{{ db.mc.page }} / {{ Math.max(1, Math.ceil(db.mc.total/50)) }}</span>
+                                <button @click="dbGoPage(db.mc, db.mc.page+1, fetchMC)" :disabled="db.mc.page>=Math.ceil(db.mc.total/50)" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&gt;</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Subtitle Cache ── -->
+                    <div v-if="db.tab === 'sc'" class="bg-white rounded-lg shadow">
+                        <div class="p-3 border-b flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <input v-model="db.sc.q" @keyup.enter="fetchSC" placeholder="Search key…" class="border rounded px-2 py-1.5 text-sm w-52">
+                                <button @click="fetchSC" class="bg-blue-500 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-600">Search</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button v-if="db.sc.sel.size" @click="scDeleteSelected" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Del ({{ db.sc.sel.size }})</button>
+                                <button @click="scClearAll" class="bg-red-700 text-white px-3 py-1.5 rounded text-sm hover:bg-red-800">Clear All</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 w-8"><input type="checkbox" @change="toggleDbSelAll(db.sc, db.sc.rows.map(r=>r.key))" :checked="db.sc.rows.length>0 && db.sc.rows.every(r=>db.sc.sel.has(r.key))" class="rounded"></th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Key</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Results</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Updated</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr v-if="db.sc.rows.length===0"><td colspan="5" class="px-3 py-4 text-center text-gray-400 text-sm">No entries.</td></tr>
+                                    <tr v-for="r in db.sc.rows" :key="r.key" :class="db.sc.sel.has(r.key) ? 'bg-indigo-50' : 'hover:bg-gray-50'">
+                                        <td class="px-3 py-2"><input type="checkbox" :checked="db.sc.sel.has(r.key)" @change="toggleDbSel(db.sc, r.key)" class="rounded"></td>
+                                        <td class="px-3 py-2 max-w-sm truncate text-xs text-gray-600 font-mono" :title="r.key">{{ r.key }}</td>
+                                        <td class="px-3 py-2 text-gray-500">{{ r.count }}</td>
+                                        <td class="px-3 py-2 text-gray-400 text-xs whitespace-nowrap">{{ fmtTime(r.updated_at) }}</td>
+                                        <td class="px-3 py-2"><button @click="scDeleteOne(r.key)" class="text-red-500 hover:text-red-700 font-medium">Del</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 border-t flex items-center justify-between text-sm text-gray-500">
+                            <span>{{ db.sc.total }} records</span>
+                            <div class="flex gap-1 items-center">
+                                <button @click="dbGoPage(db.sc, db.sc.page-1, fetchSC)" :disabled="db.sc.page<=1" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&lt;</button>
+                                <span class="px-3">{{ db.sc.page }} / {{ Math.max(1, Math.ceil(db.sc.total/50)) }}</span>
+                                <button @click="dbGoPage(db.sc, db.sc.page+1, fetchSC)" :disabled="db.sc.page>=Math.ceil(db.sc.total/50)" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&gt;</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── SRN Events ── -->
+                    <div v-if="db.tab === 'se'" class="bg-white rounded-lg shadow">
+                        <div class="p-3 border-b flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <input v-model="db.se.q" @keyup.enter="fetchSE" placeholder="Search title/filename…" class="border rounded px-2 py-1.5 text-sm w-52">
+                                <button @click="fetchSE" class="bg-blue-500 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-600">Search</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button v-if="db.se.sel.size" @click="seDeleteSelected" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Del ({{ db.se.sel.size }})</button>
+                                <button @click="seClearAll" class="bg-red-700 text-white px-3 py-1.5 rounded text-sm hover:bg-red-800">Clear All</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 w-8"><input type="checkbox" @change="toggleDbSelAll(db.se, db.se.rows.map(r=>r.id))" :checked="db.se.rows.length>0 && db.se.rows.every(r=>db.se.sel.has(r.id))" class="rounded"></th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">S/E</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Lang</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Filename</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr v-if="db.se.rows.length===0"><td colspan="9" class="px-3 py-4 text-center text-gray-400 text-sm">No events.</td></tr>
+                                    <tr v-for="r in db.se.rows" :key="r.id" :class="db.se.sel.has(r.id) ? 'bg-indigo-50' : 'hover:bg-gray-50'">
+                                        <td class="px-3 py-2"><input type="checkbox" :checked="db.se.sel.has(r.id)" @change="toggleDbSel(db.se, r.id)" class="rounded"></td>
+                                        <td class="px-3 py-2 text-xs text-gray-400 font-mono whitespace-nowrap">{{ r.id.slice(0,8) }}…</td>
+                                        <td class="px-3 py-2 text-gray-900 whitespace-nowrap">{{ r.title }}</td>
+                                        <td class="px-3 py-2 text-gray-500 whitespace-nowrap">S{{ r.season }}/E{{ r.ep }}</td>
+                                        <td class="px-3 py-2 text-gray-500">{{ r.lang }}</td>
+                                        <td class="px-3 py-2 text-gray-600 max-w-xs truncate text-xs" :title="r.filename">{{ r.filename }}</td>
+                                        <td class="px-3 py-2 text-gray-400 text-xs whitespace-nowrap">{{ fmtBytes(r.size_bytes) }}</td>
+                                        <td class="px-3 py-2 text-gray-400 text-xs whitespace-nowrap">{{ fmtTime(r.created_at) }}</td>
+                                        <td class="px-3 py-2"><button @click="seDeleteOne(r.id)" class="text-red-500 hover:text-red-700 font-medium">Del</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 border-t flex items-center justify-between text-sm text-gray-500">
+                            <span>{{ db.se.total }} records</span>
+                            <div class="flex gap-1 items-center">
+                                <button @click="dbGoPage(db.se, db.se.page-1, fetchSE)" :disabled="db.se.page<=1" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&lt;</button>
+                                <span class="px-3">{{ db.se.page }} / {{ Math.max(1, Math.ceil(db.se.total/50)) }}</span>
+                                <button @click="dbGoPage(db.se, db.se.page+1, fetchSE)" :disabled="db.se.page>=Math.ceil(db.se.total/50)" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&gt;</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Seen Files ── -->
+                    <div v-if="db.tab === 'sf'" class="bg-white rounded-lg shadow">
+                        <div class="p-3 border-b flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <input v-model="db.sf.q" @keyup.enter="fetchSF" placeholder="Path filter…" class="border rounded px-2 py-1.5 text-sm w-52">
+                                <button @click="fetchSF" class="bg-blue-500 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-600">Search</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button v-if="db.sf.sel.size" @click="sfDeleteSelected" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Del ({{ db.sf.sel.size }})</button>
+                                <button @click="sfClearAll" class="bg-red-700 text-white px-3 py-1.5 rounded text-sm hover:bg-red-800">Clear All</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 w-8"><input type="checkbox" @change="toggleDbSelAll(db.sf, db.sf.rows.map(r=>r.path))" :checked="db.sf.rows.length>0 && db.sf.rows.every(r=>db.sf.sel.has(r.path))" class="rounded"></th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Path</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mtime</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr v-if="db.sf.rows.length===0"><td colspan="4" class="px-3 py-4 text-center text-gray-400 text-sm">No files.</td></tr>
+                                    <tr v-for="r in db.sf.rows" :key="r.path" :class="db.sf.sel.has(r.path) ? 'bg-indigo-50' : 'hover:bg-gray-50'">
+                                        <td class="px-3 py-2"><input type="checkbox" :checked="db.sf.sel.has(r.path)" @change="toggleDbSel(db.sf, r.path)" class="rounded"></td>
+                                        <td class="px-3 py-2 text-gray-700 text-xs break-all">{{ r.path }}</td>
+                                        <td class="px-3 py-2 text-gray-400 text-xs whitespace-nowrap">{{ fmtNano(r.mtime_ns) }}</td>
+                                        <td class="px-3 py-2"><button @click="sfDeleteOne(r.path)" class="text-red-500 hover:text-red-700 font-medium">Del</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 border-t flex items-center justify-between text-sm text-gray-500">
+                            <span>{{ db.sf.total }} records</span>
+                            <div class="flex gap-1 items-center">
+                                <button @click="dbGoPage(db.sf, db.sf.page-1, fetchSF)" :disabled="db.sf.page<=1" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&lt;</button>
+                                <span class="px-3">{{ db.sf.page }} / {{ Math.max(1, Math.ceil(db.sf.total/50)) }}</span>
+                                <button @click="dbGoPage(db.sf, db.sf.page+1, fetchSF)" :disabled="db.sf.page>=Math.ceil(db.sf.total/50)" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&gt;</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Failed Files ── -->
+                    <div v-if="db.tab === 'ff'" class="bg-white rounded-lg shadow">
+                        <div class="p-3 border-b flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <input v-model="db.ff.q" @keyup.enter="fetchFF" placeholder="Path filter…" class="border rounded px-2 py-1.5 text-sm w-52">
+                                <button @click="fetchFF" class="bg-blue-500 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-600">Search</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button v-if="db.ff.sel.size" @click="ffDeleteSelected" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Del ({{ db.ff.sel.size }})</button>
+                                <button @click="ffClearAll" class="bg-red-700 text-white px-3 py-1.5 rounded text-sm hover:bg-red-800">Clear All</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 w-8"><input type="checkbox" @change="toggleDbSelAll(db.ff, db.ff.rows.map(r=>r.path))" :checked="db.ff.rows.length>0 && db.ff.rows.every(r=>db.ff.sel.has(r.path))" class="rounded"></th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Path</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Failed At</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr v-if="db.ff.rows.length===0"><td colspan="4" class="px-3 py-4 text-center text-gray-400 text-sm">No failed files.</td></tr>
+                                    <tr v-for="r in db.ff.rows" :key="r.path" :class="db.ff.sel.has(r.path) ? 'bg-indigo-50' : 'hover:bg-gray-50'">
+                                        <td class="px-3 py-2"><input type="checkbox" :checked="db.ff.sel.has(r.path)" @change="toggleDbSel(db.ff, r.path)" class="rounded"></td>
+                                        <td class="px-3 py-2 text-gray-700 text-xs break-all">{{ r.path }}</td>
+                                        <td class="px-3 py-2 text-gray-400 text-xs whitespace-nowrap">{{ fmtTime(r.failed_at) }}</td>
+                                        <td class="px-3 py-2"><button @click="ffDeleteOne(r.path)" class="text-red-500 hover:text-red-700 font-medium">Del</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 border-t flex items-center justify-between text-sm text-gray-500">
+                            <span>{{ db.ff.total }} records</span>
+                            <div class="flex gap-1 items-center">
+                                <button @click="dbGoPage(db.ff, db.ff.page-1, fetchFF)" :disabled="db.ff.page<=1" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&lt;</button>
+                                <span class="px-3">{{ db.ff.page }} / {{ Math.max(1, Math.ceil(db.ff.total/50)) }}</span>
+                                <button @click="dbGoPage(db.ff, db.ff.page+1, fetchFF)" :disabled="db.ff.page>=Math.ceil(db.ff.total/50)" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&gt;</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Global Stats ── -->
+                    <div v-if="db.tab === 'gs'" class="bg-white rounded-lg shadow">
+                        <div class="p-3 border-b flex justify-between items-center">
+                            <h2 class="text-sm font-bold text-gray-700">Global Stats</h2>
+                            <button @click="fetchGS" class="bg-blue-500 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-600">Refresh</button>
+                        </div>
+                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Key</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <tr v-if="db.gs.rows.length===0"><td colspan="3" class="px-4 py-4 text-center text-gray-400">No stats.</td></tr>
+                                <tr v-for="r in db.gs.rows" :key="r.key" class="hover:bg-gray-50">
+                                    <td class="px-4 py-2 font-medium text-gray-700 font-mono">{{ r.key }}</td>
+                                    <td class="px-4 py-2">
+                                        <div v-if="db.gs.editKey === r.key" class="flex gap-2 items-center">
+                                            <input v-model.number="db.gs.editVal" type="number" class="border rounded px-2 py-1 text-sm w-32">
+                                            <button @click="gsSaveEdit" class="bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700">Save</button>
+                                            <button @click="db.gs.editKey = null" class="text-gray-500 text-xs hover:text-gray-700">Cancel</button>
+                                        </div>
+                                        <span v-else class="text-gray-600">{{ r.value }}</span>
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <button v-if="db.gs.editKey !== r.key" @click="gsStartEdit(r)" class="text-indigo-600 hover:text-indigo-900 font-medium text-sm">Edit</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ── Tried Magnets ── -->
+                    <div v-if="db.tab === 'tm'" class="bg-white rounded-lg shadow">
+                        <div class="p-3 border-b flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <input v-model="db.tm.q" @keyup.enter="fetchTM" placeholder="Hash filter…" class="border rounded px-2 py-1.5 text-sm w-52">
+                                <button @click="fetchTM" class="bg-blue-500 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-600">Search</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button v-if="db.tm.sel.size" @click="tmDeleteSelected" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Del ({{ db.tm.sel.size }})</button>
+                                <button @click="tmClearAll" class="bg-red-700 text-white px-3 py-1.5 rounded text-sm hover:bg-red-800">Clear All</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 w-8"><input type="checkbox" @change="toggleDbSelAll(db.tm, db.tm.rows.map(r=>r.hash))" :checked="db.tm.rows.length>0 && db.tm.rows.every(r=>db.tm.sel.has(r.hash))" class="rounded"></th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hash</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tried At</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr v-if="db.tm.rows.length===0"><td colspan="4" class="px-3 py-4 text-center text-gray-400 text-sm">No magnets.</td></tr>
+                                    <tr v-for="r in db.tm.rows" :key="r.hash" :class="db.tm.sel.has(r.hash) ? 'bg-indigo-50' : 'hover:bg-gray-50'">
+                                        <td class="px-3 py-2"><input type="checkbox" :checked="db.tm.sel.has(r.hash)" @change="toggleDbSel(db.tm, r.hash)" class="rounded"></td>
+                                        <td class="px-3 py-2 text-gray-600 text-xs font-mono">{{ r.hash }}</td>
+                                        <td class="px-3 py-2 text-gray-400 text-xs whitespace-nowrap">{{ fmtTime(r.tried_at) }}</td>
+                                        <td class="px-3 py-2"><button @click="tmDeleteOne(r.hash)" class="text-red-500 hover:text-red-700 font-medium">Del</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 border-t flex items-center justify-between text-sm text-gray-500">
+                            <span>{{ db.tm.total }} records</span>
+                            <div class="flex gap-1 items-center">
+                                <button @click="dbGoPage(db.tm, db.tm.page-1, fetchTM)" :disabled="db.tm.page<=1" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&lt;</button>
+                                <span class="px-3">{{ db.tm.page }} / {{ Math.max(1, Math.ceil(db.tm.total/50)) }}</span>
+                                <button @click="dbGoPage(db.tm, db.tm.page+1, fetchTM)" :disabled="db.tm.page>=Math.ceil(db.tm.total/50)" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&gt;</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Seen RSS ── -->
+                    <div v-if="db.tab === 'rss'" class="bg-white rounded-lg shadow">
+                        <div class="p-3 border-b flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <input v-model="db.rss.q" @keyup.enter="fetchRSS2" placeholder="GUID filter…" class="border rounded px-2 py-1.5 text-sm w-52">
+                                <button @click="fetchRSS2" class="bg-blue-500 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-600">Search</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button v-if="db.rss.sel.size" @click="rss2DeleteSelected" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Del ({{ db.rss.sel.size }})</button>
+                                <button @click="rss2ClearAll" class="bg-red-700 text-white px-3 py-1.5 rounded text-sm hover:bg-red-800">Clear All</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 w-8"><input type="checkbox" @change="toggleDbSelAll(db.rss, db.rss.rows.map(r=>r.guid))" :checked="db.rss.rows.length>0 && db.rss.rows.every(r=>db.rss.sel.has(r.guid))" class="rounded"></th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">GUID</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr v-if="db.rss.rows.length===0"><td colspan="3" class="px-3 py-4 text-center text-gray-400 text-sm">No GUIDs.</td></tr>
+                                    <tr v-for="r in db.rss.rows" :key="r.guid" :class="db.rss.sel.has(r.guid) ? 'bg-indigo-50' : 'hover:bg-gray-50'">
+                                        <td class="px-3 py-2"><input type="checkbox" :checked="db.rss.sel.has(r.guid)" @change="toggleDbSel(db.rss, r.guid)" class="rounded"></td>
+                                        <td class="px-3 py-2 text-gray-600 text-xs font-mono break-all">{{ r.guid }}</td>
+                                        <td class="px-3 py-2 whitespace-nowrap"><button @click="rss2DeleteOne(r.guid)" class="text-red-500 hover:text-red-700 font-medium">Del</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 border-t flex items-center justify-between text-sm text-gray-500">
+                            <span>{{ db.rss.total }} records</span>
+                            <div class="flex gap-1 items-center">
+                                <button @click="dbGoPage(db.rss, db.rss.page-1, fetchRSS2)" :disabled="db.rss.page<=1" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&lt;</button>
+                                <span class="px-3">{{ db.rss.page }} / {{ Math.max(1, Math.ceil(db.rss.total/50)) }}</span>
+                                <button @click="dbGoPage(db.rss, db.rss.page+1, fetchRSS2)" :disabled="db.rss.page>=Math.ceil(db.rss.total/50)" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&gt;</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Patterns ── -->
+                    <div v-if="db.tab === 'pat'" class="bg-white rounded-lg shadow">
+                        <div class="p-3 border-b flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <input v-model="db.pat.q" @keyup.enter="fetchPAT2" placeholder="Name/key filter…" class="border rounded px-2 py-1.5 text-sm w-52">
+                                <button @click="fetchPAT2" class="bg-blue-500 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-600">Search</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button v-if="db.pat.sel.size" @click="pat2DeleteSelected" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Del ({{ db.pat.sel.size }})</button>
+                                <button @click="pat2ClearAll" class="bg-red-700 text-white px-3 py-1.5 rounded text-sm hover:bg-red-800">Clear All</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 w-8"><input type="checkbox" @change="toggleDbSelAll(db.pat, db.pat.rows.map(r=>r.source_type+':'+r.source_key))" :checked="db.pat.rows.length>0 && db.pat.rows.every(r=>db.pat.sel.has(r.source_type+':'+r.source_key))" class="rounded"></th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pattern</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Updated</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr v-if="db.pat.rows.length===0"><td colspan="6" class="px-3 py-4 text-center text-gray-400 text-sm">No patterns.</td></tr>
+                                    <tr v-for="r in db.pat.rows" :key="r.source_type+':'+r.source_key"
+                                        :class="db.pat.sel.has(r.source_type+':'+r.source_key) ? 'bg-indigo-50' : 'hover:bg-gray-50'">
+                                        <td class="px-3 py-2"><input type="checkbox" :checked="db.pat.sel.has(r.source_type+':'+r.source_key)" @change="toggleDbSel(db.pat, r.source_type+':'+r.source_key)" class="rounded"></td>
+                                        <td class="px-3 py-2 text-gray-500 text-xs">{{ r.source_type }}</td>
+                                        <td class="px-3 py-2 text-gray-900 max-w-xs truncate" :title="r.source_key">{{ r.original_name }}</td>
+                                        <td class="px-3 py-2 max-w-sm">
+                                            <div v-if="db.pat.editRow && db.pat.editRow.source_key === r.source_key && db.pat.editRow.source_type === r.source_type">
+                                                <textarea v-model="db.pat.editRow.value" rows="3" class="w-full border border-indigo-400 rounded px-2 py-1 text-xs font-mono"></textarea>
+                                                <div v-if="db.pat.editRow.error" class="text-red-500 text-xs">{{ db.pat.editRow.error }}</div>
+                                                <div class="flex gap-2 mt-1">
+                                                    <button @click="pat2SaveEdit" class="bg-indigo-600 text-white px-2 py-0.5 rounded text-xs hover:bg-indigo-700">Save</button>
+                                                    <button @click="db.pat.editRow = null" class="text-gray-500 text-xs">Cancel</button>
+                                                </div>
+                                            </div>
+                                            <code v-else @click="pat2StartEdit(r)" class="text-xs text-gray-700 font-mono break-all cursor-pointer hover:text-indigo-700" :title="r.pattern">{{ r.pattern }}</code>
+                                        </td>
+                                        <td class="px-3 py-2 text-gray-400 text-xs whitespace-nowrap">{{ fmtTime(r.updated_at) }}</td>
+                                        <td class="px-3 py-2 whitespace-nowrap space-x-2">
+                                            <button @click="pat2StartEdit(r)" class="text-indigo-600 hover:text-indigo-900 font-medium">Edit</button>
+                                            <button @click="pat2DeleteOne(r)" class="text-red-500 hover:text-red-700 font-medium">Del</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 border-t flex items-center justify-between text-sm text-gray-500">
+                            <span>{{ db.pat.total }} records</span>
+                            <div class="flex gap-1 items-center">
+                                <button @click="dbGoPage(db.pat, db.pat.page-1, fetchPAT2)" :disabled="db.pat.page<=1" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&lt;</button>
+                                <span class="px-3">{{ db.pat.page }} / {{ Math.max(1, Math.ceil(db.pat.total/50)) }}</span>
+                                <button @click="dbGoPage(db.pat, db.pat.page+1, fetchPAT2)" :disabled="db.pat.page>=Math.ceil(db.pat.total/50)" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&gt;</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Subtitle Archives ── -->
+                    <div v-if="db.tab === 'sa'" class="bg-white rounded-lg shadow">
+                        <div class="p-3 border-b flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <input v-model="db.sa.q" @keyup.enter="fetchSA" placeholder="MD5/key filter…" class="border rounded px-2 py-1.5 text-sm w-52">
+                                <button @click="fetchSA" class="bg-blue-500 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-600">Search</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button v-if="db.sa.sel.size" @click="saDeleteSelected" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Del ({{ db.sa.sel.size }})</button>
+                                <button @click="saClearAll" class="bg-red-700 text-white px-3 py-1.5 rounded text-sm hover:bg-red-800">Clear All</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 w-8"><input type="checkbox" @change="toggleDbSelAll(db.sa, db.sa.rows.map(r=>r.file_md5))" :checked="db.sa.rows.length>0 && db.sa.rows.every(r=>db.sa.sel.has(r.file_md5))" class="rounded"></th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">MD5</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Files</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Updated</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr v-if="db.sa.rows.length===0"><td colspan="6" class="px-3 py-4 text-center text-gray-400 text-sm">No archives.</td></tr>
+                                    <tr v-for="r in db.sa.rows" :key="r.file_md5" :class="db.sa.sel.has(r.file_md5) ? 'bg-indigo-50' : 'hover:bg-gray-50'">
+                                        <td class="px-3 py-2"><input type="checkbox" :checked="db.sa.sel.has(r.file_md5)" @change="toggleDbSel(db.sa, r.file_md5)" class="rounded"></td>
+                                        <td class="px-3 py-2 text-gray-500 font-mono text-xs">{{ r.file_md5.slice(0,12) }}…</td>
+                                        <td class="px-3 py-2 text-gray-600 text-xs max-w-xs truncate" :title="r.parent_source_key">{{ r.parent_source_type }}: {{ r.parent_source_key }}</td>
+                                        <td class="px-3 py-2 text-gray-500">{{ r.content_map_len }}</td>
+                                        <td class="px-3 py-2 text-gray-400 text-xs whitespace-nowrap">{{ fmtTime(r.updated_at) }}</td>
+                                        <td class="px-3 py-2"><button @click="saDeleteOne(r.file_md5)" class="text-red-500 hover:text-red-700 font-medium">Del</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 border-t flex items-center justify-between text-sm text-gray-500">
+                            <span>{{ db.sa.total }} records</span>
+                            <div class="flex gap-1 items-center">
+                                <button @click="dbGoPage(db.sa, db.sa.page-1, fetchSA)" :disabled="db.sa.page<=1" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&lt;</button>
+                                <span class="px-3">{{ db.sa.page }} / {{ Math.max(1, Math.ceil(db.sa.total/50)) }}</span>
+                                <button @click="dbGoPage(db.sa, db.sa.page+1, fetchSA)" :disabled="db.sa.page>=Math.ceil(db.sa.total/50)" class="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40">&gt;</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- MC Edit Modal -->
+        <div v-if="db.mc.editRow !== null" class="fixed z-20 inset-0 flex items-center justify-center bg-gray-800 bg-opacity-60">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+                <div class="px-5 py-4 border-b">
+                    <h3 class="text-base font-semibold text-gray-900">Edit Metadata Cache Entry</h3>
+                    <p class="text-xs text-gray-500 mt-1 break-all">{{ db.mc.editDraft.raw_title }}</p>
+                </div>
+                <div class="px-5 py-4 space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Title</label>
+                            <input v-model="db.mc.editDraft.title" class="w-full border rounded px-2 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">TMDB ID</label>
+                            <input v-model.number="db.mc.editDraft.tmdb_id" type="number" class="w-full border rounded px-2 py-1.5 text-sm">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Season</label>
+                            <input v-model.number="db.mc.editDraft.season" type="number" class="w-full border rounded px-2 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Episode</label>
+                            <input v-model.number="db.mc.editDraft.episode" type="number" class="w-full border rounded px-2 py-1.5 text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Aliases (one per line)</label>
+                        <textarea v-model="db.mc.editDraft.aliases_str" rows="4" class="w-full border rounded px-2 py-1.5 text-sm font-mono text-xs"></textarea>
+                    </div>
+                </div>
+                <div class="px-5 py-3 bg-gray-50 flex gap-3 justify-end rounded-b-lg">
+                    <button @click="db.mc.editRow = null" class="px-4 py-2 text-sm text-gray-700 border rounded hover:bg-gray-100">Cancel</button>
+                    <button @click="mcSaveEdit" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reingest Modal -->
+        <div v-if="showModal" class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showModal = false"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">Manual Reingest</h3>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">File Path</label>
+                            <input type="text" disabled v-model="reingestForm.file_path" class="mt-1 block w-full bg-gray-100 border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">Override Title (Optional)</label>
+                            <input type="text" v-model="reingestForm.override.title" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">Override TMDB ID (Optional)</label>
+                            <input type="text" v-model="reingestForm.override.tmdb_id" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Override Season</label>
+                                <input type="number" v-model.number="reingestForm.override.season" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Override Episode</label>
+                                <input type="number" v-model.number="reingestForm.override.ep" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm">
+                            </div>
+                        </div>
+                        <div v-if="reingestError" class="mt-2 text-sm text-red-600">{{ reingestError }}</div>
+                        <div v-if="reingestSuccess" class="mt-2 text-sm text-green-600">Reingest triggered successfully!</div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="button" @click="submitReingest" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 sm:ml-3 sm:w-auto sm:text-sm">
+                            Submit
+                        </button>
+                        <button type="button" @click="showModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed, onMounted, watch } = Vue
+
+        createApp({
+            setup() {
+                const currentTab = ref('config')
+
+                // ── Media Library state ──
+                const mediaConfigured = ref(false)
+                const mediaSeriesList = ref([])
+                const mediaFilter = ref('')
+                const mediaLoadingAll = ref(false)
+                const mediaOpenSeries = ref(new Set())
+                const mediaOpenSeasons = ref(new Set())
+                const mediaSeriesData = ref({})       // { [seriesId]: SeriesDetail }
+                const mediaLoadingSeries = ref(new Set())
+                const mediaSearchingEp = ref(new Set())   // video_path keys
+                const mediaSearchingSeason = ref(new Set()) // "seriesId:season" keys
+
+                const filteredMediaSeries = computed(() => {
+                    const f = mediaFilter.value.toLowerCase()
+                    return f ? mediaSeriesList.value.filter(s => s.title.toLowerCase().includes(f)) : mediaSeriesList.value
+                })
+                const configData = ref({})
+                const statusData = ref({})
+                const jobsData = ref([])
+                const statsData = ref({})
+                const llmData = ref({})
+
+                // SRN sub-tab state
+                const srnTab = ref('failed')
+                const failedFiles = ref([])
+                const srnEvents = ref([])
+                const cacheEntries = ref([])
+                const cacheByTitle = ref({})
+                const cacheOpenGroups = ref(new Set())
+                const seenRSS = ref([])
+                const seenFiles = ref([])
+                const evFilter = ref({ title: '', season: 0, ep: 0 })
+                const evOpenTitles = ref(new Set())
+                const evOpenSeasons = ref(new Set())
+                const seenFilter = ref('')
+                const patterns = ref([])
+                const patternFilter = ref('')
+                const editingPattern = ref(null) // { key, sourceType, sourceKey, value, error }
+                const selectedPatterns = ref(new Set())
+                const allPatternsSelected = computed(() =>
+                    patterns.value.length > 0 &&
+                    patterns.value.every(p => selectedPatterns.value.has(p.source_type+':'+p.source_key))
+                )
+
+                const eventsByTitle = computed(() => {
+                    const map = {}
+                    for (const ev of srnEvents.value) {
+                        const t = ev.title || '(unknown)'
+                        if (!map[t]) map[t] = {}
+                        if (!map[t][ev.season]) map[t][ev.season] = []
+                        map[t][ev.season].push(ev)
+                    }
+                    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).map(([title, seasonMap]) => ({
+                        title,
+                        totalEps: Object.values(seasonMap).reduce((acc, eps) => acc + eps.length, 0),
+                        seasons: Object.entries(seasonMap)
+                            .sort(([a], [b]) => Number(a) - Number(b))
+                            .map(([season, episodes]) => ({
+                                season: Number(season),
+                                episodes: episodes.sort((a, b) => a.ep - b.ep)
+                            }))
+                    }))
+                })
+
+                const srnSubTabs = computed(() => [
+                    { key: 'failed',   label: 'Failed Files',    count: failedFiles.value.length },
+                    { key: 'events',   label: 'SRN Events',      count: srnEvents.value.length },
+                    { key: 'cache',    label: 'Subtitle Cache',  count: cacheEntries.value.length },
+                    { key: 'rss',      label: 'Seen RSS',        count: seenRSS.value.length },
+                    { key: 'seen',     label: 'Seen Files',      count: seenFiles.value.length },
+                    { key: 'patterns', label: 'Regex Patterns',  count: patterns.value.length },
+                ])
+
+                const showModal = ref(false)
+                const reingestError = ref('')
+                const reingestSuccess = ref(false)
+                const reingestForm = ref({
+                    file_path: '',
+                    override: { title: '', tmdb_id: '', season: 0, ep: 0 }
+                })
+
+                // ── helpers ──
+                const fmtTime = (unix) => unix ? new Date(unix * 1000).toLocaleString() : '-'
+                const fmtNano = (ns) => ns ? new Date(ns / 1e6).toLocaleString() : '-'
+                const fmtBytes = (b) => {
+                    if (!b) return '-'
+                    if (b < 1024) return b + ' B'
+                    if (b < 1048576) return (b/1024).toFixed(1) + ' KB'
+                    return (b/1048576).toFixed(1) + ' MB'
+                }
+
+                const postJSON = async (url, body) => {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    })
+                    return res.json()
+                }
+
+                // ── DB Manager state ──
+                const db = reactive({
+                    tab: 'mc',
+                    mc: { rows: [], total: 0, page: 1, q: '', sel: new Set(), editRow: null, editDraft: {} },
+                    sc: { rows: [], total: 0, page: 1, q: '', sel: new Set() },
+                    se: { rows: [], total: 0, page: 1, q: '', sel: new Set() },
+                    sf: { rows: [], total: 0, page: 1, q: '', sel: new Set() },
+                    ff: { rows: [], total: 0, page: 1, q: '', sel: new Set() },
+                    gs: { rows: [], editKey: null, editVal: 0 },
+                    tm: { rows: [], total: 0, page: 1, q: '', sel: new Set() },
+                    rss: { rows: [], total: 0, page: 1, q: '', sel: new Set() },
+                    pat: { rows: [], total: 0, page: 1, q: '', sel: new Set(), editRow: null },
+                    sa: { rows: [], total: 0, page: 1, q: '', sel: new Set() },
+                })
+
+                const dbSubTabs = computed(() => [
+                    { key: 'mc',  label: 'Metadata Cache',  count: db.mc.total },
+                    { key: 'sc',  label: 'Subtitle Cache',  count: db.sc.total },
+                    { key: 'se',  label: 'SRN Events',      count: db.se.total },
+                    { key: 'sf',  label: 'Seen Files',      count: db.sf.total },
+                    { key: 'ff',  label: 'Failed Files',    count: db.ff.total },
+                    { key: 'gs',  label: 'Global Stats',    count: db.gs.rows.length },
+                    { key: 'tm',  label: 'Tried Magnets',   count: db.tm.total },
+                    { key: 'rss', label: 'Seen RSS',        count: db.rss.total },
+                    { key: 'pat', label: 'Patterns',        count: db.pat.total },
+                    { key: 'sa',  label: 'Sub Archives',    count: db.sa.total },
+                ])
+
+                const dbGoPage = (state, p, fetchFn) => {
+                    const max = Math.max(1, Math.ceil(state.total / 50))
+                    if (p < 1 || p > max) return
+                    state.page = p
+                    fetchFn()
+                }
+                const toggleDbSel = (state, key) => {
+                    state.sel.has(key) ? state.sel.delete(key) : state.sel.add(key)
+                }
+                const toggleDbSelAll = (state, keys) => {
+                    if (keys.every(k => state.sel.has(k))) { state.sel.clear() }
+                    else { keys.forEach(k => state.sel.add(k)) }
+                }
+                const dbFetchPage = async (path, state, extra = '') => {
+                    const url = `/api/frontend/db/${path}?page=${state.page}&limit=50&q=${encodeURIComponent(state.q)}${extra}`
+                    try {
+                        const data = await (await fetch(url)).json()
+                        state.rows = data.rows || []
+                        state.total = data.total || 0
+                    } catch (e) { console.error(e) }
+                }
+
+                const fetchMC   = () => dbFetchPage('metadata-cache', db.mc)
+                const fetchSC   = () => dbFetchPage('subtitle-cache', db.sc)
+                const fetchSE   = () => dbFetchPage('srn-events', db.se)
+                const fetchSF   = () => dbFetchPage('seen-files', db.sf)
+                const fetchFF   = () => dbFetchPage('failed-files', db.ff)
+                const fetchGS   = async () => {
+                    try { const d = await (await fetch('/api/frontend/db/global-stats')).json(); db.gs.rows = d.rows || [] } catch (e) { console.error(e) }
+                }
+                const fetchTM   = () => dbFetchPage('tried-magnets', db.tm)
+                const fetchRSS2 = () => dbFetchPage('seen-rss', db.rss)
+                const fetchPAT2 = () => dbFetchPage('patterns', db.pat)
+                const fetchSA   = () => dbFetchPage('subtitle-archives', db.sa)
+
+                // mc operations
+                const mcDeleteOne = async (key) => {
+                    if (!confirm(`Delete metadata cache entry?\n${key}`)) return
+                    await postJSON('/api/frontend/db/metadata-cache/delete', { keys: [key], all: false })
+                    fetchMC()
+                }
+                const mcDeleteSelected = async () => {
+                    if (!confirm(`Delete ${db.mc.sel.size} selected entries?`)) return
+                    await postJSON('/api/frontend/db/metadata-cache/delete', { keys: [...db.mc.sel], all: false })
+                    db.mc.sel.clear(); fetchMC()
+                }
+                const mcClearAll = async () => {
+                    if (!confirm('Clear ALL metadata cache? All titles will be re-resolved.')) return
+                    await postJSON('/api/frontend/db/metadata-cache/delete', { keys: [], all: true })
+                    db.mc.sel.clear(); fetchMC()
+                }
+                const mcStartEdit = (row) => {
+                    db.mc.editDraft = { raw_title: row.raw_title, tmdb_id: row.tmdb_id, title: row.title, season: row.season, episode: row.episode, aliases_str: (row.aliases || []).join('\n') }
+                    db.mc.editRow = row
+                }
+                const mcSaveEdit = async () => {
+                    const d = db.mc.editDraft
+                    const aliases = d.aliases_str ? d.aliases_str.split('\n').map(s => s.trim()).filter(Boolean) : []
+                    await postJSON('/api/frontend/db/metadata-cache/upsert', { raw_title: d.raw_title, tmdb_id: Number(d.tmdb_id), title: d.title, season: Number(d.season), episode: Number(d.episode), aliases })
+                    db.mc.editRow = null; fetchMC()
+                }
+
+                // sc operations
+                const scDeleteOne = async (key) => { await postJSON('/api/frontend/db/subtitle-cache/delete', { keys: [key], all: false }); fetchSC() }
+                const scDeleteSelected = async () => {
+                    if (!confirm(`Delete ${db.sc.sel.size} selected?`)) return
+                    await postJSON('/api/frontend/db/subtitle-cache/delete', { keys: [...db.sc.sel], all: false })
+                    db.sc.sel.clear(); fetchSC()
+                }
+                const scClearAll = async () => {
+                    if (!confirm('Clear ALL subtitle cache?')) return
+                    await postJSON('/api/frontend/db/subtitle-cache/delete', { keys: [], all: true })
+                    db.sc.sel.clear(); fetchSC()
+                }
+
+                // se operations
+                const seDeleteOne = async (id) => {
+                    if (!confirm(`Delete event ${id.slice(0,12)}…?`)) return
+                    await postJSON('/api/frontend/db/srn-events/delete', { keys: [id], all: false }); fetchSE()
+                }
+                const seDeleteSelected = async () => {
+                    if (!confirm(`Delete ${db.se.sel.size} selected events?`)) return
+                    await postJSON('/api/frontend/db/srn-events/delete', { keys: [...db.se.sel], all: false })
+                    db.se.sel.clear(); fetchSE()
+                }
+                const seClearAll = async () => {
+                    if (!confirm('Clear ALL SRN events? This removes all stored subtitles.')) return
+                    await postJSON('/api/frontend/db/srn-events/delete', { keys: [], all: true })
+                    db.se.sel.clear(); fetchSE()
+                }
+
+                // sf operations
+                const sfDeleteOne = async (path) => {
+                    if (!confirm(`Delete seen-file record?\n${path}`)) return
+                    await postJSON('/api/frontend/db/seen-files/delete', { keys: [path], all: false }); fetchSF()
+                }
+                const sfDeleteSelected = async () => {
+                    if (!confirm(`Delete ${db.sf.sel.size} selected?`)) return
+                    await postJSON('/api/frontend/db/seen-files/delete', { keys: [...db.sf.sel], all: false })
+                    db.sf.sel.clear(); fetchSF()
+                }
+                const sfClearAll = async () => {
+                    if (!confirm('Clear ALL seen-files? DiskScan will reprocess everything.')) return
+                    await postJSON('/api/frontend/db/seen-files/delete', { keys: [], all: true })
+                    db.sf.sel.clear(); fetchSF()
+                }
+
+                // ff operations
+                const ffDeleteOne = async (path) => {
+                    if (!confirm(`Delete failed-file record?\n${path}`)) return
+                    await postJSON('/api/frontend/db/failed-files/delete', { keys: [path], all: false }); fetchFF()
+                }
+                const ffDeleteSelected = async () => {
+                    if (!confirm(`Delete ${db.ff.sel.size} selected?`)) return
+                    await postJSON('/api/frontend/db/failed-files/delete', { keys: [...db.ff.sel], all: false })
+                    db.ff.sel.clear(); fetchFF()
+                }
+                const ffClearAll = async () => {
+                    if (!confirm('Clear ALL failed-files records?')) return
+                    await postJSON('/api/frontend/db/failed-files/delete', { keys: [], all: true })
+                    db.ff.sel.clear(); fetchFF()
+                }
+
+                // gs operations
+                const gsStartEdit = (row) => { db.gs.editKey = row.key; db.gs.editVal = row.value }
+                const gsSaveEdit = async () => {
+                    await postJSON('/api/frontend/db/global-stats/update', { key: db.gs.editKey, value: db.gs.editVal })
+                    db.gs.editKey = null; fetchGS()
+                }
+
+                // tm operations
+                const tmDeleteOne = async (hash) => { await postJSON('/api/frontend/db/tried-magnets/delete', { keys: [hash], all: false }); fetchTM() }
+                const tmDeleteSelected = async () => {
+                    if (!confirm(`Delete ${db.tm.sel.size} selected?`)) return
+                    await postJSON('/api/frontend/db/tried-magnets/delete', { keys: [...db.tm.sel], all: false })
+                    db.tm.sel.clear(); fetchTM()
+                }
+                const tmClearAll = async () => {
+                    if (!confirm('Clear ALL tried magnets?')) return
+                    await postJSON('/api/frontend/db/tried-magnets/delete', { keys: [], all: true })
+                    db.tm.sel.clear(); fetchTM()
+                }
+
+                // rss2 operations
+                const rss2DeleteOne = async (guid) => {
+                    if (!confirm(`Delete RSS GUID?\n${guid}`)) return
+                    await postJSON('/api/frontend/db/seen-rss/delete', { keys: [guid], all: false }); fetchRSS2()
+                }
+                const rss2DeleteSelected = async () => {
+                    if (!confirm(`Delete ${db.rss.sel.size} selected?`)) return
+                    await postJSON('/api/frontend/db/seen-rss/delete', { keys: [...db.rss.sel], all: false })
+                    db.rss.sel.clear(); fetchRSS2()
+                }
+                const rss2ClearAll = async () => {
+                    if (!confirm('Clear ALL seen RSS GUIDs?')) return
+                    await postJSON('/api/frontend/db/seen-rss/delete', { keys: [], all: true })
+                    db.rss.sel.clear(); fetchRSS2()
+                }
+
+                // pat2 operations
+                const pat2StartEdit = (row) => {
+                    db.pat.editRow = { source_type: row.source_type, source_key: row.source_key, value: row.pattern, error: '' }
+                }
+                const pat2SaveEdit = async () => {
+                    const ep = db.pat.editRow
+                    const res = await postJSON('/api/frontend/db/patterns/update', { source_type: ep.source_type, source_key: ep.source_key, pattern: ep.value })
+                    if (res.error) { ep.error = res.error; return }
+                    db.pat.editRow = null; fetchPAT2()
+                }
+                const pat2DeleteOne = async (row) => {
+                    if (!confirm(`Delete pattern for "${row.original_name}"?`)) return
+                    await postJSON('/api/frontend/db/patterns/delete', { keys: [{ source_type: row.source_type, source_key: row.source_key }], all: false })
+                    db.pat.sel.delete(row.source_type + ':' + row.source_key); fetchPAT2()
+                }
+                const pat2DeleteSelected = async () => {
+                    if (!confirm(`Delete ${db.pat.sel.size} selected patterns?`)) return
+                    const keys = db.pat.rows.filter(r => db.pat.sel.has(r.source_type+':'+r.source_key)).map(r => ({ source_type: r.source_type, source_key: r.source_key }))
+                    await postJSON('/api/frontend/db/patterns/delete', { keys, all: false })
+                    db.pat.sel.clear(); fetchPAT2()
+                }
+                const pat2ClearAll = async () => {
+                    if (!confirm('Delete ALL cached patterns? LLM will re-induce them on next ingest.')) return
+                    await postJSON('/api/frontend/db/patterns/delete', { keys: [], all: true })
+                    db.pat.sel.clear(); fetchPAT2()
+                }
+
+                // sa operations
+                const saDeleteOne = async (md5) => {
+                    if (!confirm(`Delete archive ${md5.slice(0,12)}…?`)) return
+                    await postJSON('/api/frontend/db/subtitle-archives/delete', { keys: [md5], all: false }); fetchSA()
+                }
+                const saDeleteSelected = async () => {
+                    if (!confirm(`Delete ${db.sa.sel.size} selected?`)) return
+                    await postJSON('/api/frontend/db/subtitle-archives/delete', { keys: [...db.sa.sel], all: false })
+                    db.sa.sel.clear(); fetchSA()
+                }
+                const saClearAll = async () => {
+                    if (!confirm('Clear ALL subtitle archives?')) return
+                    await postJSON('/api/frontend/db/subtitle-archives/delete', { keys: [], all: true })
+                    db.sa.sel.clear(); fetchSA()
+                }
+
+                const loadDbTab = (t) => {
+                    if (t === 'mc')  fetchMC()
+                    if (t === 'sc')  fetchSC()
+                    if (t === 'se')  fetchSE()
+                    if (t === 'sf')  fetchSF()
+                    if (t === 'ff')  fetchFF()
+                    if (t === 'gs')  fetchGS()
+                    if (t === 'tm')  fetchTM()
+                    if (t === 'rss') fetchRSS2()
+                    if (t === 'pat') fetchPAT2()
+                    if (t === 'sa')  fetchSA()
+                }
+
+                // ── fetch functions ──
+                const fetchData = async (url, targetRef) => {
+                    try {
+                        const res = await fetch(url)
+                        targetRef.value = await res.json()
+                    } catch (e) { console.error('fetch', url, e) }
+                }
+
+                const fetchConfig = () => fetchData('/api/frontend/config', configData)
+                const fetchStatus = () => fetchData('/api/frontend/status', statusData)
+                const fetchJobs = async () => {
+                    try {
+                        const data = await (await fetch('/api/frontend/jobs')).json()
+                        jobsData.value = data.jobs || []
+                    } catch (e) { console.error(e) }
+                }
+                const fetchStats = () => fetchData('/api/frontend/stats', statsData)
+                const fetchLLM = () => fetchData('/api/frontend/llm-usages', llmData)
+
+                const fetchMediaLibrary = async () => {
+                    mediaLoadingAll.value = true
+                    try {
+                        const data = await (await fetch('/api/frontend/media-library')).json()
+                        mediaConfigured.value = data.configured || false
+                        mediaSeriesList.value = data.series || []
+                    } catch (e) { console.error(e) } finally {
+                        mediaLoadingAll.value = false
+                    }
+                }
+                const loadMediaSeries = async (seriesId) => {
+                    const ls = new Set(mediaLoadingSeries.value); ls.add(seriesId); mediaLoadingSeries.value = ls
+                    try {
+                        const data = await (await fetch(`/api/frontend/media-library/${seriesId}`)).json()
+                        mediaSeriesData.value = { ...mediaSeriesData.value, [seriesId]: data }
+                    } catch (e) { console.error(e) } finally {
+                        const ls = new Set(mediaLoadingSeries.value); ls.delete(seriesId); mediaLoadingSeries.value = ls
+                    }
+                }
+                const toggleMediaSeries = async (seriesId) => {
+                    const s = new Set(mediaOpenSeries.value)
+                    if (s.has(seriesId)) { s.delete(seriesId) } else {
+                        s.add(seriesId)
+                        if (!mediaSeriesData.value[seriesId]) await loadMediaSeries(seriesId)
+                    }
+                    mediaOpenSeries.value = s
+                }
+                const toggleMediaSeason = (seriesId, season) => {
+                    const key = seriesId + ':' + season
+                    const s = new Set(mediaOpenSeasons.value)
+                    s.has(key) ? s.delete(key) : s.add(key)
+                    mediaOpenSeasons.value = s
+                }
+                const searchEpisode = async (series, seasonNum, ep) => {
+                    const se = new Set(mediaSearchingEp.value); se.add(ep.video_path); mediaSearchingEp.value = se
+                    try {
+                        const res = await postJSON('/api/frontend/search-episode', {
+                            video_path: ep.video_path,
+                            tmdb_id: series.tmdbId ? String(series.tmdbId) : (mediaSeriesData.value[series.id]?.tmdb_id || ''),
+                            local_title: mediaSeriesData.value[series.id]?.local_title || series.title,
+                            season: seasonNum,
+                            ep: ep.ep
+                        })
+                        if (res.outcome === 'wrote' || res.outcome === 'already_has') {
+                            await loadMediaSeries(series.id)
+                        }
+                    } catch (e) { console.error(e) } finally {
+                        const se = new Set(mediaSearchingEp.value); se.delete(ep.video_path); mediaSearchingEp.value = se
+                    }
+                }
+                const searchSeasonMissing = async (series, season) => {
+                    const key = series.id + ':' + season.season
+                    const ss = new Set(mediaSearchingSeason.value); ss.add(key); mediaSearchingSeason.value = ss
+                    try {
+                        const missing = season.episodes.filter(e => !e.has_sub)
+                        for (const ep of missing) {
+                            await searchEpisode(series, season.season, ep)
+                        }
+                    } finally {
+                        const ss = new Set(mediaSearchingSeason.value); ss.delete(key); mediaSearchingSeason.value = ss
+                    }
+                }
+
+                const fetchFailedFiles = async () => {
+                    try {
+                        const data = await (await fetch('/debug/srn/failed-files')).json()
+                        failedFiles.value = data.files || []
+                    } catch (e) { console.error(e) }
+                }
+                const fetchEvents = async () => {
+                    try {
+                        const { title, season, ep } = evFilter.value
+                        const qs = new URLSearchParams({ title, season, ep }).toString()
+                        const data = await (await fetch(`/debug/srn/events?${qs}`)).json()
+                        srnEvents.value = data.events || []
+                    } catch (e) { console.error(e) }
+                }
+                const fetchCache = async () => {
+                    try {
+                        const data = await (await fetch('/debug/srn/cache')).json()
+                        cacheEntries.value = data.entries || []
+                        cacheByTitle.value = data.by_title || {}
+                    } catch (e) { console.error(e) }
+                }
+                const fetchSeenRSS = async () => {
+                    try {
+                        const data = await (await fetch('/debug/srn/rss')).json()
+                        seenRSS.value = data.guids || []
+                    } catch (e) { console.error(e) }
+                }
+                const fetchSeenFiles = async () => {
+                    try {
+                        const qs = seenFilter.value ? `?path=${encodeURIComponent(seenFilter.value)}` : ''
+                        const data = await (await fetch(`/debug/srn/seen-files${qs}`)).json()
+                        seenFiles.value = data.files || []
+                    } catch (e) { console.error(e) }
+                }
+                const fetchPatterns = async () => {
+                    try {
+                        const qs = patternFilter.value ? `?name=${encodeURIComponent(patternFilter.value)}` : ''
+                        const data = await (await fetch(`/debug/srn/patterns${qs}`)).json()
+                        patterns.value = data.patterns || []
+                    } catch (e) { console.error(e) }
+                }
+
+                // ── delete actions ──
+                const clearAllFailedFiles = async () => {
+                    if (!confirm(`Clear ALL ${failedFiles.value.length} failed file records?\nDiskScan will retry them on next run.`)) return
+                    await postJSON('/debug/srn/correct/clear-failed-files', {})
+                    fetchFailedFiles()
+                }
+                const deleteFailedFile = async (path) => {
+                    if (!confirm(`Delete failed record?\n${path}`)) return
+                    await postJSON('/debug/srn/correct/delete-failed-file', { path })
+                    fetchFailedFiles()
+                }
+                const deleteEvent = async (id) => {
+                    if (!confirm(`Delete event ${id.slice(0,12)}…?`)) return
+                    await postJSON('/debug/srn/correct/delete-event', { event_id: id })
+                    fetchEvents()
+                }
+                const deleteByTitle = async () => {
+                    const { title, season } = evFilter.value
+                    if (!title || !confirm(`Delete ALL events for "${title}"${season ? ` S${season}` : ''}?`)) return
+                    await postJSON('/debug/srn/correct/delete-title', { title, season })
+                    fetchEvents()
+                }
+                const toggleEvTitle = (title) => {
+                    const s = new Set(evOpenTitles.value)
+                    s.has(title) ? s.delete(title) : s.add(title)
+                    evOpenTitles.value = s
+                }
+                const toggleEvSeason = (title, season) => {
+                    const key = title + ':' + season
+                    const s = new Set(evOpenSeasons.value)
+                    s.has(key) ? s.delete(key) : s.add(key)
+                    evOpenSeasons.value = s
+                }
+                const deleteEvTitle = async (title) => {
+                    if (!confirm(`Delete ALL events for "${title}"?`)) return
+                    await postJSON('/debug/srn/correct/delete-title', { title, season: 0 })
+                    fetchEvents()
+                }
+                const deleteEvSeason = async (title, season) => {
+                    if (!confirm(`Delete all S${String(season).padStart(2,'0')} events for "${title}"?`)) return
+                    await postJSON('/debug/srn/correct/delete-title', { title, season })
+                    fetchEvents()
+                }
+                const deleteCacheEntry = async (key) => {
+                    await postJSON('/debug/srn/correct/delete-cache', { key })
+                    fetchCache()
+                }
+                const deleteCacheByTitle = async (title) => {
+                    if (!confirm(`Delete all cache entries for "${title}"?`)) return
+                    await postJSON('/debug/srn/correct/delete-cache', { title })
+                    fetchCache()
+                }
+                const deleteRSS = async (guid) => {
+                    if (!confirm(`Remove RSS GUID?\n${guid}`)) return
+                    await postJSON('/debug/srn/correct/delete-rss', { guid })
+                    fetchSeenRSS()
+                }
+                const clearAllSeenFiles = async () => {
+                    if (!confirm(`Clear ALL ${seenFiles.value.length} seen-file records?\nDiskScan will re-process all files on next run.`)) return
+                    await postJSON('/debug/srn/correct/clear-seen-files', {})
+                    fetchSeenFiles()
+                }
+                const deleteSeenFile = async (path) => {
+                    if (!confirm(`Remove seen-file record?\n${path}`)) return
+                    await postJSON('/debug/srn/correct/delete-seen-file', { path })
+                    fetchSeenFiles()
+                }
+                const startEditPattern = (p) => {
+                    editingPattern.value = {
+                        key: p.source_type + ':' + p.source_key,
+                        sourceType: p.source_type,
+                        sourceKey: p.source_key,
+                        value: p.pattern,
+                        error: ''
+                    }
+                }
+                const savePattern = async (p) => {
+                    const ep = editingPattern.value
+                    if (!ep) return
+                    ep.error = ''
+                    const res = await postJSON('/debug/srn/correct/update-pattern', {
+                        source_type: ep.sourceType,
+                        source_key: ep.sourceKey,
+                        pattern: ep.value
+                    })
+                    if (res.error) { ep.error = res.error; return }
+                    editingPattern.value = null
+                    fetchPatterns()
+                }
+                const deletePattern = async (p) => {
+                    if (!confirm(`Delete cached regex for "${p.original_name}"?\nIt will be re-induced by LLM on next ingest.`)) return
+                    await postJSON('/debug/srn/correct/delete-pattern', {
+                        source_type: p.source_type,
+                        source_key: p.source_key
+                    })
+                    const s = new Set(selectedPatterns.value)
+                    s.delete(p.source_type+':'+p.source_key)
+                    selectedPatterns.value = s
+                    fetchPatterns()
+                }
+                const togglePatternSelect = (p) => {
+                    const key = p.source_type+':'+p.source_key
+                    const s = new Set(selectedPatterns.value)
+                    s.has(key) ? s.delete(key) : s.add(key)
+                    selectedPatterns.value = s
+                }
+                const toggleSelectAllPatterns = () => {
+                    if (allPatternsSelected.value) {
+                        selectedPatterns.value = new Set()
+                    } else {
+                        selectedPatterns.value = new Set(patterns.value.map(p => p.source_type+':'+p.source_key))
+                    }
+                }
+                const deleteSelectedPatterns = async () => {
+                    const count = selectedPatterns.value.size
+                    if (!confirm(`Delete ${count} selected pattern(s)?`)) return
+                    const toDelete = patterns.value.filter(p => selectedPatterns.value.has(p.source_type+':'+p.source_key))
+                    await Promise.all(toDelete.map(p => postJSON('/debug/srn/correct/delete-pattern', {
+                        source_type: p.source_type,
+                        source_key: p.source_key
+                    })))
+                    selectedPatterns.value = new Set()
+                    fetchPatterns()
+                }
+                const clearAllPatterns = async () => {
+                    if (!confirm(`Delete ALL cached regex patterns?\nAll will be re-induced by LLM on next ingest.`)) return
+                    await postJSON('/debug/srn/correct/clear-patterns', {})
+                    selectedPatterns.value = new Set()
+                    fetchPatterns()
+                }
+
+                const toggleCacheGroup = (title) => {
+                    const s = new Set(cacheOpenGroups.value)
+                    s.has(title) ? s.delete(title) : s.add(title)
+                    cacheOpenGroups.value = s
+                }
+
+                // ── modal ──
+                const openReingestModal = (path) => {
+                    reingestForm.value = { file_path: path, override: { title: '', tmdb_id: '', season: 0, ep: 0 } }
+                    reingestError.value = ''
+                    reingestSuccess.value = false
+                    showModal.value = true
+                }
+                const submitReingest = async () => {
+                    reingestError.value = ''
+                    reingestSuccess.value = false
+                    const payload = { file_path: reingestForm.value.file_path }
+                    const ov = reingestForm.value.override
+                    if (ov.title || ov.tmdb_id || ov.season || ov.ep) payload.override = ov
+                    try {
+                        const res = await fetch('/debug/srn/correct/reingest', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        })
+                        const result = await res.json()
+                        if (!res.ok || result.error) {
+                            reingestError.value = result.error || 'Unknown error'
+                        } else {
+                            reingestSuccess.value = true
+                            setTimeout(() => { showModal.value = false; fetchFailedFiles() }, 1500)
+                        }
+                    } catch (e) { reingestError.value = e.message }
+                }
+
+                // ── routing ──
+                watch(currentTab, (t) => {
+                    if (t === 'config') fetchConfig()
+                    if (t === 'status') fetchStatus()
+                    if (t === 'jobs') fetchJobs()
+                    if (t === 'stats') fetchStats()
+                    if (t === 'llm') fetchLLM()
+                    if (t === 'srn') loadSrnTab(srnTab.value)
+                    if (t === 'media') fetchMediaLibrary()
+                    if (t === 'db') loadDbTab(db.tab)
+                })
+                watch(srnTab, (t) => loadSrnTab(t))
+
+                const loadSrnTab = (t) => {
+                    if (t === 'failed')   fetchFailedFiles()
+                    if (t === 'events')   fetchEvents()
+                    if (t === 'cache')    fetchCache()
+                    if (t === 'rss')      fetchSeenRSS()
+                    if (t === 'seen')     fetchSeenFiles()
+                    if (t === 'patterns') fetchPatterns()
+                }
+
+                onMounted(() => fetchConfig())
+
+                return {
+                    currentTab,
+                    configData, statusData, jobsData, statsData, llmData,
+                    fetchConfig, fetchStatus, fetchJobs, fetchStats, fetchLLM,
+                    srnTab, srnSubTabs,
+                    failedFiles, fetchFailedFiles, deleteFailedFile, clearAllFailedFiles,
+                    srnEvents, evFilter, fetchEvents, deleteEvent, deleteByTitle,
+                    eventsByTitle, evOpenTitles, evOpenSeasons,
+                    toggleEvTitle, toggleEvSeason, deleteEvTitle, deleteEvSeason,
+                    cacheEntries, cacheByTitle, cacheOpenGroups, fetchCache,
+                    toggleCacheGroup, deleteCacheEntry, deleteCacheByTitle,
+                    seenRSS, fetchSeenRSS, deleteRSS,
+                    seenFiles, seenFilter, fetchSeenFiles, deleteSeenFile, clearAllSeenFiles,
+                    patterns, patternFilter, fetchPatterns,
+                    editingPattern, startEditPattern, savePattern, deletePattern,
+                    selectedPatterns, allPatternsSelected,
+                    togglePatternSelect, toggleSelectAllPatterns,
+                    deleteSelectedPatterns, clearAllPatterns,
+                    showModal, openReingestModal, submitReingest,
+                    reingestForm, reingestError, reingestSuccess,
+                    fmtTime, fmtNano, fmtBytes,
+                    mediaConfigured, mediaSeriesList, mediaFilter, mediaLoadingAll,
+                    filteredMediaSeries, mediaOpenSeries, mediaOpenSeasons,
+                    mediaSeriesData, mediaLoadingSeries, mediaSearchingEp, mediaSearchingSeason,
+                    fetchMediaLibrary, loadMediaSeries, toggleMediaSeries, toggleMediaSeason,
+                    searchEpisode, searchSeasonMissing,
+                    db, dbSubTabs, dbGoPage, toggleDbSel, toggleDbSelAll,
+                    fetchMC, fetchSC, fetchSE, fetchSF, fetchFF, fetchGS, fetchTM, fetchRSS2, fetchPAT2, fetchSA,
+                    mcDeleteOne, mcDeleteSelected, mcClearAll, mcStartEdit, mcSaveEdit,
+                    scDeleteOne, scDeleteSelected, scClearAll,
+                    seDeleteOne, seDeleteSelected, seClearAll,
+                    sfDeleteOne, sfDeleteSelected, sfClearAll,
+                    ffDeleteOne, ffDeleteSelected, ffClearAll,
+                    gsStartEdit, gsSaveEdit,
+                    tmDeleteOne, tmDeleteSelected, tmClearAll,
+                    rss2DeleteOne, rss2DeleteSelected, rss2ClearAll,
+                    pat2StartEdit, pat2SaveEdit, pat2DeleteOne, pat2DeleteSelected, pat2ClearAll,
+                    saDeleteOne, saDeleteSelected, saClearAll,
+                    loadDbTab,
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

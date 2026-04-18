@@ -1,0 +1,21 @@
+services:
+  lagarr:
+    build:
+      context: .
+      dockerfile: Dockerfile.golang
+    container_name: lagarr
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PROWLARR_TARGET_URL=http://prowlarr:9696/2/api
+      - PROWLARR_API_KEY=your_prowlarr_api_key
+      - SONARR_TARGET_URL=http://sonarr:8989
+      - SONARR_API_KEY=your_sonarr_api_key
+      - TMDB_API_KEY=your_tmdb_api_key
+    networks:
+      - media-net
+
+networks:
+  media-net:
+    external: true

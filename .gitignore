@@ -1,0 +1,37 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+
+# Poetry
+poetry.lock
+
+# Docker
+.dockerignore
+
+# IDEs
+.vscode/
+.idea/
+
+# App logs/secrets
+.env
+*.log
+*.o
+/hijarr
+/coderef
+srnscan
+/test_parser
+*.db
+.claude/
+*.db*
+data/
+start_local.sh
+node_modules/
+internal/web/frontend_dist/
+*lock.*
+/sonarr_api*.json
