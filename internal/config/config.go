@@ -157,7 +157,7 @@ var (
 	LocalPathPrefix        = getEnv("LOCAL_PATH_PREFIX", "")
 	// BackendSRNURL is the URL of the local srnfeeder Backend-SRN instance.
 	// When set, the SRN provider queries it as Priority 2 (before cloud relays).
-	// Example: "http://srnfeeder:8002"
+	// Example: "http://srnfeeder:8001"
 	BackendSRNURL = getEnv("BACKEND_SRN_URL", "")
 
 	SRNRelayURLs = filterEmpty(strings.Split(getEnv("SRN_RELAY_URLS", ""), ","))

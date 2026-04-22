@@ -6,11 +6,11 @@
 Hijarr 是专为 **Sonarr / Prowlarr** 深度定制的中文化增强工具，使用 **Go** 编写。  
 名称来源：**Hi**jacking upstream services for Son**arr** / Baz**arr**。
 
-It 通过拦截元数据请求、翻译搜索词、以及直连 **SRN (Subtitle Relay Network)** 协议，实现了从“元数据中文化”到“字幕自动精准下发”的完整闭环。
+It 通过拦截元数据请求、翻译搜索词、以及直连 **SRN (Subtitle Relay Network)** 协议，实现了从"元数据中文化"到"字幕自动精准下发"的完整闭环。
 
 ---
 
-## 🏗️ 模块架构
+## 模块架构
 
 Hijarr 目前已精简为单一职责的高效核心：**Smart Client (consumption-side focus)**。
 
@@ -31,39 +31,49 @@ Hijarr 目前已精简为单一职责的高效核心：**Smart Client (consumpti
 
 ---
 
-## 🌐 生态系统
+## 生态系统
 
 | 项目 | 角色 |
 | :--- | :--- |
 | [**Hijarr**](https://github.com/DeliYuxiang/Hijarr)（本项目） | Smart Client — DNS 劫持、字幕同步、媒体库 MD5 管理 |
 | [**SRN**](https://github.com/DeliYuxiang/SubtitleRelayNetwork) | 去中心化字幕中继协议，Hijarr 的首选查询源与内容提供商 |
+| [**srnrelay**](../srnrelay) | Go 共享模块：SRN 协议核心（Event 类型、签名、网络查询），Hijarr 通过本地 `replace` 依赖 |
 | [**Sonarr**](https://github.com/Sonarr/Sonarr) | 剧集管理，Hijarr 拦截其元数据请求并直连同步字幕 |
 | [**Caddy**](https://github.com/caddyserver/caddy) | 反向代理，建议作为 Hijarr 的 TLS 终止层与访问控制层 |
 
 ---
 
-## 🌟 核心功能 (Technical Highlights)
+## 核心功能 (Technical Highlights)
 
 ### 1. 透明元数据劫持 (Metadata Proxy)
 通过 DNS 劫持拦截 Sonarr 的元数据请求，利用 `gjson/sjson` 实时改写：
-- **Skyhook / TVDB 劫持**：拦截 `skyhook.sonarr.tv` 与 `api.thetvdb.com`，通过 TMDB 实时将剧名、季名、集标题翻译为中文。
+- **Skyhook / TVDB 劫持**：拦截 `skyhook.sonarr.tv`、`api.thetvdb.com`、`api4.thetvdb.com`，通过 TMDB 实时将剧名、季名、集标题翻译为中文。同时支持 Skyhook v1 API 和 TVDB v4 API 两套格式。
 - **语言段自动劫持**：自动检测并将 URL 中的语言请求（如 `eng`）重写为目标语言（`zho`）。
 
 ### 2. Torznab 代理与裂变搜索 (Prowlarr Fission)
-- **语义搜索转换**：将 Sonarr 的 ID 或英文关键词自动转为 TMDB 中文标题，解决中文动漫索引器搜不到英文名的问题。
-- **分级裂变 (Tiered Search)**：自动执行 `集 -> 季 -> 系列` 的三级阶梯式搜索，最大化提升下载命中率。
-- **季数覆盖 (Manual Mapping)**：内置 `ManualSeasonOverrides`，解决国内外季数定义偏移问题。
+- **语义搜索转换**：将 Sonarr 的 TVDB/IMDB ID 或英文关键词自动转为 TMDB 中文标题，解决中文动漫索引器搜不到英文名的问题。
+- **分级裂变 (Tiered Search)**：自动执行 `集 -> 季 -> 系列` 的三级阶梯式搜索，≥10 条结果即停，最大化提升下载命中率。
+- **季数覆盖 (Manual Mapping)**：内置 `ManualSeasonOverrides`（如物语系列、鬼灭之刃等），解决国内外季数定义偏移问题。
 
 ### 3. SRN 字幕同步与 MD5 管理 (Subtitle Engine)
-- **取代 Bazarr**：`SonarrSyncJob` 定时扫描 Sonarr 媒体库，为缺失字幕的视频直接从 SRN 拉取并写入本地目录。
+- **取代 Bazarr**：`SonarrSyncJob` 定时扫描 Sonarr 媒体库（默认每 5 分钟），为缺失字幕的视频直接从 SRN 拉取并写入本地目录，触发 Sonarr `RescanSeries`。
+- **三级优先级查询**：(1) 本地 SQLite 队列 → (2) 本地 srnfeeder 实例 (`BACKEND_SRN_URL`) → (3) 云端 Relay 网络 (`SRN_RELAY_URLS`)。
 - **MD5 追踪与锁定 (Pinning)**：
     - 记录视频关联字幕的 `sub_md5` 与归档包 `archive_md5`。
-    - **手动选择记忆**：用户通过 Web UI 手动“应用”特定字幕版本后，系统会建立锁定关系，防止后续自动同步将其回退到低质量版本。
-- **去中心化检索**：优先使用 `tmdb_id` 在 SRN 全网检索，彻底摆脱传统字幕站爬虫的低效与易损坏性。
+    - **手动选择记忆**：用户通过 Web UI 手动"应用"特定字幕版本后，系统会建立锁定关系，防止后续自动同步将其回退到低质量版本。
+- **黑名单与固定**：可在 Web UI 中将质量差的字幕加入黑名单，或将特定版本固定（pin）为首选。
+
+### 4. Web 管理界面
+内嵌 Vue 3 单页应用，提供：
+- **媒体库**：浏览 Sonarr 全部剧集，查看各集字幕状态，手动触发字幕搜索或应用。
+- **SRN 管理**：浏览/删除本地 SRN 队列事件。
+- **数据库管理**：查看/编辑元数据缓存、已扫描文件、处理失败文件。
+- **偏好设置**：管理字幕黑名单与固定（pin）。
+- **配置/状态/统计**：运行时配置概览、SRN 命中率统计。
 
 ---
 
-## ❌ 为什么移除 Bazarr
+## 为什么移除 Bazarr
 
 Bazarr 被彻底踢出支持列表，原因如下：
 
@@ -74,13 +84,13 @@ Bazarr 被彻底踢出支持列表，原因如下：
 即使 Hijarr 已完成匹配、重命名、本地 CDN 托管，Bazarr 仍会以自身的文件名校验逻辑大概率拒绝字幕。
 
 **3. 上游字幕网站已基本死亡**  
-原 Bazarr 字幕源（assrt.net 等）可用性极低。Hijarr 现在的主要字幕来源是 qBittorrent 下载的字幕组包。
+原 Bazarr 字幕源（assrt.net 等）可用性极低。Hijarr 现在的主要字幕来源是通过 SRN 协议分发的高质量字幕包。
 
 **现状**：`SonarrSyncJob` 直接对接 Sonarr API，完全取代 Bazarr 的字幕管理职责。
 
 ---
 
-## 🏗️ 架构概览
+## 架构概览
 
 ```
 Sonarr / Prowlarr
@@ -92,40 +102,35 @@ Sonarr / Prowlarr
   └─ Web Admin / Media Library ─────► WebAPI → Sonarr Sync Control + SRN Manual Selection
 
 后台调度器 (Scheduler)
-  ├─ SonarrSyncJob    → Sonarr API → SRN Provider (Local/Relay) → Write Subtitle to Video Dir
-  └─ TMDBCache        → Persistent SQLite cache for translations
+  └─ SonarrSyncJob  → Sonarr API → SRN Provider (Local→Backend→Cloud) → Write Subtitle to Video Dir
+
+社区维护系统 (Maintenance)
+  └─ srn-resign-v2  → 一次性迁移：V1 短 ID → V2 完整 SHA256，执行后自动重启
 ```
 
-
-详细文件地图见 [docs/progress.md](./docs/progress.md)。
+详细文件地图见 [docs/CODEREF.md](./docs/CODEREF.md)（自动生成）。
 
 ---
 
-## 🔄 社区维护任务（Community Maintenance Tasks）
+## 社区维护任务（Community Maintenance Tasks）
 
-Hijarr 内置一套灵活的**社区维护任务**系统。除了处理协议变更的一次性修复（如签名算法升级）外，它还允许 client 领取并处理 SRN 全网的维护工作，如 `Kind 1002` 撤销任务、`Kind 1003` 更新任务或统计类 Event 的整合。
+Hijarr 内置一套灵活的**社区维护任务**系统。除了处理协议变更的一次性修复（如签名算法升级）外，它还允许 client 领取并处理 SRN 全网的维护工作。
 
 **运行语义**：
 - **一次性任务 (protocol)**：在 boot 阶段同步检查。若有未执行的任务（如 `srn-resign-v2`），阻塞执行并完成后自动 `syscall.Exec` **原地重启**进程。
-- **社区选配任务 (cleanup/stats)**：允许 client 根据自身配置，“领取”特定类别的全网维护工作，配合 SRN 网络进行数据的维护与清理。
+- **社区选配任务 (cleanup/stats)**：允许 client 根据自身配置，"领取"特定类别的全网维护工作。
 
 **任务类别**：
 - `protocol`：协议级强制升级（一次性运行 + 重启）。
 - `cleanup`：SRN 网络清理（如撤销过期或错误的字幕）。
 - `stats`：统计与元数据整合任务。
 
-```
-启动 → 检查 protocol 任务 → 有 → 执行 → 成功 → 标记完成 → 重启
-                           ↓
-正常运行 ← 启动背景 Job ← 领取并执行选配的社区任务 (cleanup/stats)
-```
-
-**开发者：如何新增任务**，参见 `internal/maintenance/` 下的接口实现。
-
+**当前已注册任务**：
+- `srn-resign-v2`：将本节点本地队列中的 V1 短 ID（32 hex）事件升级为 V2 完整 SHA256 ID（64 hex），同时向 relay 发送 `Kind 1003` 替换通知。
 
 ---
 
-## 🚀 快速开始
+## 快速开始
 
 ### Docker Compose 部署 (推荐)
 
@@ -144,7 +149,9 @@ services:
       - SONARR_API_KEY=your_sonarr_api_key
       - PROWLARR_TARGET_URL=http://prowlarr:9696/2/api
       - PROWLARR_API_KEY=your_prowlarr_api_key
-      - SRN_RELAY_URLS=https://srn-worker.delibill.workers.dev
+      - SRN_RELAY_URLS=https://srn.example.com
+      # 节点身份（生产必须固化，否则重建容器后身份轮换）
+      - SRN_PRIV_KEY=your_128_hex_char_ed25519_private_key
       # 路径映射：Sonarr 容器内路径前缀 vs Hijarr 挂载点
       - SONARR_PATH_PREFIX=/media
       - LOCAL_PATH_PREFIX=/mnt/media
@@ -153,10 +160,12 @@ services:
     volumes:
       - ./data:/data
       - /mnt/media:/mnt/media # 必须挂载与 Sonarr 对应的视频目录
+    dns:
+      - 8.8.8.8  # 必须使用公网 DNS，避免 DNS 劫持循环
 ```
 
 ### DNS 劫持配置
-为了使元数据翻译生效，需将以下域名劫持到 Hijarr IP：
+为了使元数据翻译生效，需将以下域名劫持到 Hijarr（经由 Caddy TLS 终止）：
 - `skyhook.sonarr.tv`
 - `api.thetvdb.com`
 - `api4.thetvdb.com`
@@ -165,20 +174,28 @@ services:
 
 ---
 
-## 🛠️ 环境参数
+## 环境参数
 
 | 变量 | 默认值 | 说明 |
 | :--- | :--- | :--- |
 | `PORT` | `8001` | 服务监听端口 |
 | `TMDB_API_KEY` | (必填) | TMDB API v3 Key |
+| `TARGET_LANGUAGE` | `zh-CN` | TMDB 查询语言（标题翻译） |
+| `TVDB_LANGUAGE` | `zho` | 注入 TVDB/Skyhook URL 的语言码 |
 | `SONARR_URL` | (空) | Sonarr 地址（启用同步任务必须） |
 | `SONARR_API_KEY` | (空) | Sonarr API Key |
-| `PROWLARR_TARGET_URL` | (空) | Prowlarr API 地址 |
-| `PROWLARR_API_KEY` | (空) | Prowlarr API Key |
-| `SRN_RELAY_URLS` | (空) | SRN 中继节点，用于全局字幕检索 |
 | `SONARR_SYNC_INTERVAL` | `5m` | 媒体库字幕同步频率 |
+| `SONARR_PATH_PREFIX` | (空) | Sonarr 容器内路径前缀 |
+| `LOCAL_PATH_PREFIX` | (空) | 本地挂载点前缀（替换 `SONARR_PATH_PREFIX`） |
+| `PROWLARR_TARGET_URL` | `http://prowlarr:9696/2/api` | Prowlarr API 地址 |
+| `PROWLARR_API_KEY` | (空) | Prowlarr API Key |
+| `SRN_RELAY_URLS` | (空) | SRN 云端中继节点，逗号分隔，Priority 3 |
+| `BACKEND_SRN_URL` | (空) | 本地 srnfeeder 地址，Priority 2 |
+| `SRN_PREFERRED_LANGUAGES` | `zh` | relay 查询语言（逗号分隔）。可选: `zh`, `zh-hans`, `zh-hant`, `zh-bilingual`, `en` |
+| `SRN_PRIV_KEY` | (空) | 节点 Ed25519 私钥（128 hex chars）。**生产必须固化** |
+| `SRN_NODE_ALIAS` | (空) | 节点可读代号（空=回退到公钥 hex） |
+| `CACHE_DB_PATH` | `/data/hijarr.db` | SQLite 数据库路径 |
 | `LOG_LEVEL` | `info` | 日志级别 (debug/info/warn/error) |
-| `CACHE_DB_PATH` | `/data/hijarr.db` | SQLite 数据库路径 (TMDB/SRN/State) |
 
 ### LOG_LEVEL 详细说明
 
@@ -187,26 +204,25 @@ services:
 ```bash
 LOG_LEVEL=debug                        # 全部模块开 debug
 LOG_LEVEL=info,proxy=debug             # 只看 proxy 模块的 debug 日志
+LOG_LEVEL=info,sonarr=debug,srn-store=debug
 ```
 
-可用模块名及覆盖范围：
+可用模块名：
 
-| 模块名 | 覆盖文件 | 典型 debug 内容 |
+| 模块名 | 覆盖范围 | 典型 debug 内容 |
 | :--- | :--- | :--- |
-| `proxy` | `internal/proxy/torznab.go` `tvdb.go` | Torznab 翻译查询、TVDB/Skyhook 元数据改写 |
-| `srn-client` | `internal/srn/relay.go` | SRN relay 网络推送/查询、签名验证 |
+| `proxy` | `internal/proxy/` | Torznab 翻译查询、TVDB/Skyhook 元数据改写 |
 | `srn-store` | `internal/srn/provider.go` | SRN 本地 SQLite 事件存储、Query 命中 |
 | `cache` | `internal/cache/metadata_cache.go` | TMDB 翻译缓存读写 |
-| `sonarr` | `internal/scheduler/sonarr_sync.go` | 缺字幕集扫描、SRN 命中、字幕写盘、MD5 锁定检查 |
-| `scheduler` | `internal/scheduler/scheduler.go` | Job 注册、ticker 触发、手动 Sync 触发 |
-
+| `sonarr` | `internal/scheduler/sonarr_sync.go` | 缺字幕集扫描、SRN 命中、字幕写盘 |
+| `scheduler` | `internal/scheduler/scheduler.go` | Job 注册、ticker 触发、手动触发 |
 
 ---
 
-## 🔨 构建与开发
+## 构建与开发
 
 ```bash
-# 全量构建 (必须 CGO_ENABLED=0)
+# 全量构建（必须 CGO_ENABLED=0，使用纯 Go SQLite）
 CGO_ENABLED=0 go build -o hijarr ./cmd/hijarr
 
 # 运行所有测试
@@ -221,7 +237,7 @@ docker compose up --build
 
 ---
 
-## 🤖 For LLM Agents
+## For LLM Agents
 
 在修改任何代码之前，必须按顺序阅读：
 
@@ -232,19 +248,19 @@ docker compose up --build
 
 ---
 
-## 🗺️ 演进路线
+## 演进路线
 
 | 阶段 | 状态 | 目标 |
 | :--- | :--- | :--- |
 | Phase 1：本地寄生模式 | ✅ 已完成 | 本地 SQLite 节点，自动拆解季包，积累字幕数据 |
-| Phase 1.5：SRN 剥离 | ✅ 已完成 | SRN 协议层独立为 [单独项目](https://github.com/DeliYuxiang/srn)（Cloudless v2.x） |
-| Phase 2：模块拆分 | 🔲 规划中 | Proxy（消费侧）与 Feeder（生产侧）分拆为独立可部署单元 |
-| Phase 2.5：上传器独立 | 🔲 规划中 | Feeder 进一步拆分：纯上传 SDK/CLI + 爬取清洗核心 |
-| Phase 3：自治网络 | 🔲 规划中（SRN 项目） | NIPs 规范，PoW/微支付防滥用，AI 自治节点 |
+| Phase 1.5：SRN 剥离 | ✅ 已完成 | SRN 协议层独立为共享模块（srnrelay），Cloudless v2.x |
+| Phase 2：模块拆分 | 规划中 | Proxy（消费侧）与 Feeder（生产侧）分拆为独立可部署单元 |
+| Phase 2.5：上传器独立 | 规划中 | Feeder 进一步拆分：纯上传 SDK/CLI + 爬取清洗核心 |
+| Phase 3：自治网络 | 规划中（SRN 项目） | NIPs 规范，PoW/微支付防滥用，AI 自治节点 |
 
 ---
 
-## 📝 许可证
+## 许可证
 
 本项目以 [GNU AGPL v3](LICENSE) 开源。个人使用及开源项目免费；若将其作为网络服务商用且不愿开放修改，需获取商业授权。
 
@@ -252,8 +268,10 @@ docker compose up --build
 
 | 模块 | 开源计划 |
 | :--- | :--- |
-| [`hijarr-proxy`](https://github.com/DeliYuxiang/Hijarr)（消费侧：DNS 劫持、字幕聚合、Sonarr 同步） | ✅ AGPL v3 开源 |
-| `hijarr-uploader`（SRN 上传 SDK/CLI） | ✅ AGPL v3 开源 |
-| `hijarr-scraper`（爬取 + 清洗核心） | 🔒 不开源 |
+| [`hijarr-proxy`](https://github.com/DeliYuxiang/Hijarr)（消费侧：DNS 劫持、字幕聚合、Sonarr 同步） | AGPL v3 开源 |
+| `hijarr-uploader`（SRN 上传 SDK/CLI） | AGPL v3 开源 |
+| `hijarr-scraper`（爬取 + 清洗核心） | 不开源 |
 
 > 贡献者通过提交 PR 即视为同意 [CONTRIBUTING.md](./CONTRIBUTING.md) 中的贡献者协议，不可撤销地将该贡献的全部著作权转让给项目维护者。
+
+<!-- doc-sha: c224d156b9ea049f4ba59dc27046a9ef808f1234 -->

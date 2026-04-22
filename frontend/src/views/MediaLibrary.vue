@@ -179,7 +179,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { api } from '@/api'
+import { api, type SRNEvent } from '@/api'
+
+// The Go /srn/api proxy adds native_name (localized title) to each event.
+type SRNSearchResult = SRNEvent & { native_name?: string }
 
 const filter = ref('')
 const loading = ref(false)
@@ -198,7 +201,7 @@ const modalLoading = ref(false)
 const modalSeries = ref<any>({})
 const modalSeason = ref(0)
 const modalEp = ref<any>({})
-const modalResults = ref<any[]>([])
+const modalResults = ref<SRNSearchResult[]>([])
 
 const filteredSeries = computed(() =>
   filter.value
@@ -298,7 +301,7 @@ const fetchResults = async () => {
   }
 }
 
-const applySubtitle = async (res: any) => {
+const applySubtitle = async (res: SRNSearchResult) => {
   try {
     await api.applySubtitle({
       video_path: modalEp.value.video_path,

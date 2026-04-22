@@ -1,0 +1,43 @@
+name: Update srnrelay
+
+on:
+  repository_dispatch:
+    types: [srnrelay-updated]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Update Go module to ${{ github.event.client_payload.version }}
+        run: |
+          go get github.com/DeliYuxiang/SRNApiClient@${{ github.event.client_payload.version }}
+          go mod tidy
+
+      - name: Update @srn/client (frontend) to ${{ github.event.client_payload.version }}
+        run: |
+          VERSION="${{ github.event.client_payload.version }}"
+          # Strip leading 'v' prefix
+          VERSION="${VERSION#v}"
+          cd frontend
+          npm install @srn/client@"npm:@deliyuxiang/srn-client@${VERSION}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add go.mod go.sum frontend/package.json frontend/package-lock.json
+          git diff --staged --quiet || git commit -m "chore: bump srnrelay to ${{ github.event.client_payload.version }}"
+          git push

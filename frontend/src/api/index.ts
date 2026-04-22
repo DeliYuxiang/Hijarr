@@ -1,4 +1,8 @@
 // Centralized API client for the Hijarr admin backend
+import type { SRNEvent } from '@srn/client'
+
+// Re-export for use in views
+export type { SRNEvent }
 
 const BASE = '/api/frontend'
 const SRN_BASE = '/srn/api'
@@ -46,7 +50,7 @@ export const api = {
   mediaSeries: (id: number) => get<any>(`${BASE}/media-library/${id}`),
   searchEpisode: (body: unknown) => post<any>(`${BASE}/search-episode`, body),
   applySubtitle: (body: unknown) => post<any>(`${BASE}/apply-subtitle`, body),
-  searchSRN: (params: string) => get<any>(`${SRN_BASE}/search${params}`),
+  searchSRN: (params: string) => get<SRNEvent[]>(`${SRN_BASE}/search${params}`),
   tmdbSeasonCount: (tmdbId: number) => get<{ count: number }>(`${BASE}/tmdb/season-count?id=${tmdbId}`),
   tmdbSearch: (q: string) => get<{ results: Array<{ Title: string, TMDBID: number }> }>(`${BASE}/tmdb/search?q=${encodeURIComponent(q)}`),
 
@@ -76,4 +80,3 @@ export const api = {
   },
 
 }
-
